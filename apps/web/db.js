@@ -66,6 +66,7 @@ async function ensureSchema() {
         id BIGSERIAL PRIMARY KEY,
         name TEXT NOT NULL,
         phone TEXT NOT NULL UNIQUE,
+        password_hash TEXT,
         reservation_count INTEGER NOT NULL DEFAULT 0,
         sms_marketing_consent BOOLEAN NOT NULL DEFAULT FALSE,
         whatsapp_marketing_consent BOOLEAN NOT NULL DEFAULT FALSE,
@@ -117,6 +118,7 @@ async function ensureSchema() {
         created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
         PRIMARY KEY (customer_id, product_id)
       );
+      ALTER TABLE customers ADD COLUMN IF NOT EXISTS password_hash TEXT;
     `).catch((error) => {
       // Allow retrying schema setup on a later call instead of caching a failure forever.
       schemaPromise = null;
@@ -417,6 +419,52 @@ function accountNotConfiguredError() {
 }
 
 const CUSTOMER_ACCOUNT_COLUMNS = 'id, name, phone, sms_marketing_consent, whatsapp_marketing_consent, first_seen_at, last_seen_at';
+
+
+export async function registerCustomerAccount(name, phone, passwordHash, rawToken) {
+  if (!dbReady) throw accountNotConfiguredError();
+  await ensureSchema();
+  const client = await getPool().connect();
+  try {
+    await client.query('BEGIN');
+    const created = await client.query(
+      "INSERT INTO customers (name, phone, password_hash, first_seen_at, last_seen_at, updated_at) VALUES ($1,$2,$3,now(),now(),now()) ON CONFLICT (phone) DO NOTHING RETURNING " + CUSTOMER_ACCOUNT_COLUMNS,
+      [name, phone, passwordHash]
+    );
+    if (!created.rowCount) {
+      const error = new Error('PHONE_ALREADY_REGISTERED');
+      error.code = 'PHONE_ALREADY_REGISTERED';
+      throw error;
+    }
+    await client.query(
+      "INSERT INTO customer_account_sessions (token_hash, customer_id, expires_at) VALUES ($1,$2,now() + interval '14 days')",
+      [hashCustomerSessionToken(rawToken), created.rows[0].id]
+    );
+    await client.query('COMMIT');
+    return created.rows[0];
+  } catch (error) {
+    try { await client.query('ROLLBACK'); } catch {}
+    throw error;
+  } finally { client.release(); }
+}
+
+export async function getCustomerAccountPasswordHash(phone) {
+  if (!dbReady) throw accountNotConfiguredError();
+  await ensureSchema();
+  const result = await getPool().query('SELECT id, name, phone, password_hash FROM customers WHERE phone = $1', [phone]);
+  return result.rows[0] || null;
+}
+
+export async function createSessionForCustomer(customerId, rawToken) {
+  if (!dbReady) throw accountNotConfiguredError();
+  await ensureSchema();
+  await getPool().query(
+    "INSERT INTO customer_account_sessions (token_hash, customer_id, expires_at) VALUES ($1,$2,now() + interval '14 days')",
+    [hashCustomerSessionToken(rawToken), customerId]
+  );
+  const result = await getPool().query('SELECT ' + CUSTOMER_ACCOUNT_COLUMNS + ' FROM customers WHERE id = $1', [customerId]);
+  return result.rows[0] || null;
+}
 
 export async function createCustomerAccountSession(phone, rawToken) {
   if (!dbReady) throw accountNotConfiguredError();
