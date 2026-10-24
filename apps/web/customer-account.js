@@ -249,69 +249,53 @@
       const data = await api('/api/account/me');
       renderAccount(data);
     } catch (error) {
-      if (error.code === 'OTP_NOT_CONFIGURED') return showOtpNotConfigured();
+      if (error.code === 'NOT_SIGNED_IN' || error.code === 'SESSION_EXPIRED') return showLogin(t('signInRequired'));
       if (error.code === 'NOT_SIGNED_IN' || error.code === 'SESSION_EXPIRED') return showLogin(t('signInRequired'));
       showLogin(error.message || t('error'), 'error');
     }
   }
 
-  $('#account-phone-form').addEventListener('submit', async event => {
-    event.preventDefault();
-    const button = $('#send-code');
-    const phone = $('#account-phone').value.trim();
-    if (!phone) return setMessage(loginMessage, t('enterPhone'), 'error');
-    button.disabled = true;
-    setMessage(loginMessage, '', '');
-    try {
-      const result = await api('/api/account/otp/start', { method: 'POST', body: { phone } });
-      pendingPhone = phone;
-      $('#account-phone-form').hidden = true;
-      $('#account-code-form').hidden = false;
-      $('#account-code-target').textContent = phone;
-      $('#account-code').focus();
-      setMessage(loginMessage, result.message || t('otpSent'), 'success');
-    } catch (error) {
-      if (error.code === 'OTP_NOT_CONFIGURED') showOtpNotConfigured();
-      else setMessage(loginMessage, error.message || t('error'), error.code === 'OTP_RATE_LIMITED' ? 'warning' : 'error');
-    } finally {
-      button.disabled = false;
-    }
-  });
 
-  $('#account-code-form').addEventListener('submit', async event => {
-    event.preventDefault();
-    const button = $('#verify-code');
-    const code = $('#account-code').value.trim();
-    if (!pendingPhone || !code) return setMessage(loginMessage, t('enterCode'), 'error');
+  async function submitAuth(form, endpoint, body, buttonText) {
+    const button = form.querySelector('button[type="submit"]');
     button.disabled = true;
     setMessage(loginMessage, '', '');
     try {
-      await api('/api/account/otp/verify', { method: 'POST', body: { phone: pendingPhone, code } });
-      $('#account-code').value = '';
+      await api(endpoint, { method: 'POST', body });
+      form.reset();
       await refreshAccount();
     } catch (error) {
       setMessage(loginMessage, error.message || t('error'), 'error');
     } finally {
       button.disabled = false;
+      button.textContent = buttonText;
     }
+  }
+
+  $('#account-register-form').addEventListener('submit', async event => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const buttonText = form.querySelector('button[type="submit"]').textContent;
+    await submitAuth(form, '/api/account/register', {
+      name: $('#register-name').value.trim(),
+      phone: $('#register-phone').value.trim(),
+      password: $('#register-password').value
+    }, buttonText);
   });
 
-  $('#change-phone').addEventListener('click', () => {
-    pendingPhone = '';
-    $('#account-code-form').hidden = true;
-    $('#account-phone-form').hidden = false;
-    $('#account-code').value = '';
-    setMessage(loginMessage, '', '');
-    $('#account-phone').focus();
+  $('#account-login-form').addEventListener('submit', async event => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const buttonText = form.querySelector('button[type="submit"]').textContent;
+    await submitAuth(form, '/api/account/login', {
+      phone: $('#login-phone').value.trim(),
+      password: $('#login-password').value
+    }, buttonText);
   });
 
   $('#account-logout').addEventListener('click', async () => {
     try { await api('/api/account/logout', { method: 'POST', body: {} }); } catch {}
     accountData = null;
-    pendingPhone = '';
-    $('#account-code-form').hidden = true;
-    $('#account-phone-form').hidden = false;
-    $('#account-code').value = '';
     showLogin(t('signedOut'), 'success');
   });
 
