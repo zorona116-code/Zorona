@@ -84,7 +84,6 @@ function publicCustomer(customer) {
     id: Number(customer.id),
     name: customer.name,
     phone: customer.phone,
-    smsMarketingConsent: customer.sms_marketing_consent === true,
     whatsappMarketingConsent: customer.whatsapp_marketing_consent === true,
     firstSeenAt: customer.first_seen_at,
     lastSeenAt: customer.last_seen_at
