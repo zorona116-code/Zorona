@@ -230,12 +230,17 @@
     (accountData.favorites || []).forEach(item => favorites.append(createProductCard(item, true, true)));
     $('#favorites-empty').hidden = (accountData.favorites || []).length > 0;
 
+    // The installed account intentionally no longer shows menu recommendations.
+    // Keep this renderer safe if the optional catalog section is absent from the page.
     const catalog = $('#account-catalog');
-    catalog.replaceChildren();
-    (accountData.catalog || []).forEach(item => {
-      catalog.append(createProductCard(item, favoriteIds.has(String(item.id)), true));
-    });
-    $('#catalog-empty').hidden = (accountData.catalog || []).length > 0;
+    if (catalog) {
+      catalog.replaceChildren();
+      (accountData.catalog || []).forEach(item => {
+        catalog.append(createProductCard(item, favoriteIds.has(String(item.id)), true));
+      });
+      const catalogEmpty = $('#catalog-empty');
+      if (catalogEmpty) catalogEmpty.hidden = (accountData.catalog || []).length > 0;
+    }
     $('#favorite-count').textContent = String((accountData.favorites || []).length);
   }
 
