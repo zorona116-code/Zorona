@@ -75,6 +75,9 @@ function renderCoupon(coupon, message = '') {
   }
 
   const campaign = coupon.couponKind === 'campaign';
+  const ownerPhoneLabel = $('#coupon-customer-phone-verify-label');
+  if (ownerPhoneLabel) ownerPhoneLabel.hidden = !(campaign && coupon.customerPhone);
+  if (!campaign && $('#coupon-customer-phone-verify')) $('#coupon-customer-phone-verify').value = '';
   const unavailable = campaign ? coupon.redeemable !== true : Boolean(coupon.redeemedAt);
   $('#coupon-result-badge').className = 'status ' + (unavailable ? 'off' : 'on');
   $('#coupon-result-badge').textContent = unavailable
@@ -385,17 +388,19 @@ codeForm?.addEventListener('submit', event => {
 });
 
 redeemButton?.addEventListener('click', async () => {
-  if (!currentCoupon?.code || currentCoupon.redeemedAt) return;
+  if (!currentCoupon?.code || (currentCoupon.couponKind === 'campaign' ? currentCoupon.redeemable !== true : Boolean(currentCoupon.redeemedAt))) return;
   if (!window.confirm('تأكيد صرف خصم ' + Number(currentCoupon.discountPercent) + '%؟ لا يمكن استخدام هذه القسيمة مرة أخرى.')) return;
   redeemButton.disabled = true;
   redeemButton.textContent = 'جارٍ تسجيل الصرف…';
   try {
     const response = await request('/api/admin/coupons/redeem', {
       method: 'POST',
-      body: JSON.stringify({ code: currentCoupon.code, orderTotal: $('#coupon-order-total')?.value || null })
+      body: JSON.stringify({ code: currentCoupon.code, orderTotal: $('#coupon-order-total')?.value || null, customerPhone: $('#coupon-customer-phone-verify')?.value || null })
     });
-    renderCoupon(response.coupon, 'تم صرف الخصم بنجاح. تم إغلاق القسيمة ولا يمكن استخدامها مرة أخرى.');
-    setCameraStatus('نجاح: تم صرف القسيمة وتسجيلها كمستخدمة.', 'success');
+    renderCoupon(response.coupon, response.coupon?.couponKind === 'campaign'
+      ? 'تم تسجيل استخدام القسيمة. راجع عدد مرات الاستخدام المتبقية.'
+      : 'تم صرف الخصم بنجاح. تم إغلاق القسيمة ولا يمكن استخدامها مرة أخرى.');
+    setCameraStatus('نجاح: تم تسجيل استخدام القسيمة.', 'success');
     void refreshCouponList();
     if (currentCoupon?.couponKind === 'campaign' || currentCoupon?.campaignId) void refreshCampaignList();
   } catch (error) {
