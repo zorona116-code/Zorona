@@ -179,6 +179,16 @@ async function ensureSchema() {
       );
       CREATE INDEX IF NOT EXISTS coupon_campaign_redemptions_campaign_idx ON coupon_campaign_redemptions (campaign_id, redeemed_at DESC);
 
+      CREATE TABLE IF NOT EXISTS web_push_subscriptions (
+        endpoint TEXT PRIMARY KEY,
+        p256dh TEXT NOT NULL,
+        auth TEXT NOT NULL,
+        user_agent TEXT NOT NULL DEFAULT '',
+        created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+      );
+      CREATE INDEX IF NOT EXISTS web_push_subscriptions_updated_idx ON web_push_subscriptions (updated_at DESC);
+
       CREATE TABLE IF NOT EXISTS marketing_campaigns (
         id BIGSERIAL PRIMARY KEY,
         title TEXT NOT NULL,
@@ -1226,4 +1236,38 @@ export async function finishMarketingCampaignIfDone(campaignId) {
     [campaignId]
   );
   return getMarketingCampaignById(campaignId);
+}
+
+
+export async function saveWebPushSubscription({ endpoint, p256dh, auth, userAgent = '' }) {
+  if (!dbReady) throw new Error('database_not_configured');
+  await ensureSchema();
+  await getPool().query(
+    `INSERT INTO web_push_subscriptions (endpoint, p256dh, auth, user_agent)
+     VALUES ($1, $2, $3, $4)
+     ON CONFLICT (endpoint) DO UPDATE
+       SET p256dh = EXCLUDED.p256dh, auth = EXCLUDED.auth,
+           user_agent = EXCLUDED.user_agent, updated_at = now()`,
+    [String(endpoint), String(p256dh), String(auth), String(userAgent).slice(0, 400)]
+  );
+  return { ok: true };
+}
+
+export async function deleteWebPushSubscription(endpoint) {
+  if (!dbReady) throw new Error('database_not_configured');
+  await ensureSchema();
+  const result = await getPool().query(
+    'DELETE FROM web_push_subscriptions WHERE endpoint = $1',
+    [String(endpoint)]
+  );
+  return { ok: true, removed: result.rowCount || 0 };
+}
+
+export async function listWebPushSubscriptions() {
+  if (!dbReady) return [];
+  await ensureSchema();
+  const result = await getPool().query(
+    'SELECT endpoint, p256dh, auth FROM web_push_subscriptions ORDER BY updated_at DESC'
+  );
+  return result.rows;
 }

@@ -1,3 +1,5 @@
+import { logServiceFailure } from '../utils/service-error.js';
+
 const PROMOTION_STATE_KEY = 'data/arabisk-promotions-v2.json';
 
 class PromotionError extends Error {
@@ -22,7 +24,7 @@ const createDefaultTodayOffer = () => ({
   updatedAt: new Date().toISOString()
 });
 
-export function createPromotionService({ readJsonWithStatus, writeJson, storageReady, persistenceReady = storageReady, allowEphemeral = false }) {
+export function createPromotionService({ readJsonWithStatus, writeJson, storageReady, persistenceReady = storageReady, allowEphemeral = false, onTodayOfferPublished = () => {} }) {
   let todayOffer = createDefaultTodayOffer();
   let lastPersistAt = null;
   let lastPersistOk = persistenceReady ? null : Boolean(allowEphemeral);
@@ -97,6 +99,7 @@ export function createPromotionService({ readJsonWithStatus, writeJson, storageR
   }
 
   async function updateTodayOffer(body = {}) {
+    const previousPublicOffer = getPublicTodayOffer();
     const startsAt = clean(body.startsAt === undefined ? todayOffer.startsAt : body.startsAt, 40);
     const endsAt = clean(body.endsAt === undefined ? todayOffer.endsAt : body.endsAt, 40);
     if (startsAt && !Number.isFinite(Date.parse(startsAt))) throw new PromotionError('وقت بداية عرض اليوم غير صالح.');
@@ -119,6 +122,17 @@ export function createPromotionService({ readJsonWithStatus, writeJson, storageR
     };
 
     if (!(await persistSnapshot())) throw new PromotionError('تعذر حفظ عرض اليوم.', 503);
+    const publishedOffer = getPublicTodayOffer();
+    const offerChanged = previousPublicOffer.enabled !== publishedOffer.enabled ||
+      previousPublicOffer.productId !== publishedOffer.productId ||
+      previousPublicOffer.badge !== publishedOffer.badge ||
+      previousPublicOffer.title !== publishedOffer.title ||
+      previousPublicOffer.message !== publishedOffer.message;
+    if (publishedOffer.enabled && offerChanged) {
+      Promise.resolve().then(() => onTodayOfferPublished(publishedOffer)).catch(error => {
+        logServiceFailure(error, { service: 'promotion', operation: 'notify-today-offer-published' });
+      });
+    }
     return getAdminTodayOffer();
   }
 

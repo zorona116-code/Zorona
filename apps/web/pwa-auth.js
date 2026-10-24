@@ -57,6 +57,59 @@
     notificationOverlay.setAttribute('aria-hidden', 'false');
   }
 
+  function decodeApplicationServerKey(value) {
+    const padding = '='.repeat((4 - value.length % 4) % 4);
+    const normalized = (value + padding).replace(/-/g, '+').replace(/_/g, '/');
+    const raw = atob(normalized);
+    return Uint8Array.from(raw, character => character.charCodeAt(0));
+  }
+
+  async function ensurePushSubscription() {
+    if (!window.isSecureContext || !('serviceWorker' in navigator) ||
+        !('PushManager' in window) || !('Notification' in window) ||
+        Notification.permission !== 'granted') return false;
+
+    const configResponse = await fetch('/api/push/config', {
+      credentials: 'same-origin',
+      cache: 'no-store',
+      headers: { Accept: 'application/json' }
+    });
+    if (!configResponse.ok) throw new Error('تعذر تحميل إعدادات الإشعارات.');
+    const config = await configResponse.json();
+    if (config.enabled !== true || !config.publicKey) return false;
+
+    const registration = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
+    await navigator.serviceWorker.ready;
+    const applicationServerKey = decodeApplicationServerKey(config.publicKey);
+    let subscription = await registration.pushManager.getSubscription();
+    if (subscription) {
+      const existingKey = subscription.options?.applicationServerKey;
+      if (existingKey && (
+        existingKey.byteLength !== applicationServerKey.byteLength ||
+        Array.from(new Uint8Array(existingKey)).some((byte, index) => byte !== applicationServerKey[index])
+      )) {
+        await subscription.unsubscribe();
+        subscription = null;
+      }
+    }
+    if (!subscription) {
+      subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey
+      });
+    }
+
+    const response = await fetch('/api/push/subscribe', {
+      method: 'POST',
+      credentials: 'same-origin',
+      cache: 'no-store',
+      headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ subscription: subscription.toJSON() })
+    });
+    if (!response.ok) throw new Error('تعذر حفظ اشتراك الإشعارات.');
+    return true;
+  }
+
   async function requestNotificationPermission() {
     if (!('Notification' in window)) {
       if (notificationStatus) notificationStatus.textContent = 'هذا المتصفح لا يدعم إشعارات التطبيق.';
@@ -77,6 +130,13 @@
       const permission = Notification.permission === 'default'
         ? await Notification.requestPermission()
         : Notification.permission;
+      if (permission === 'granted') {
+        try {
+          await ensurePushSubscription();
+        } catch {
+          if (notificationStatus) notificationStatus.textContent = 'تم السماح بالإشعارات، لكن تعذر تفعيلها الآن. سيحاول التطبيق مرة أخرى عند فتحه.';
+        }
+      }
       finishNotificationPrompt(permission === 'granted' ? 'granted' : permission === 'denied' ? 'denied' : 'prompted');
     } catch {
       if (notificationStatus) notificationStatus.textContent = 'تعذر طلب الإذن. يمكنك تغييره من إعدادات المتصفح.';
@@ -282,6 +342,9 @@
 
   setMode('register');
   maybeShowNotificationPrompt();
+  if ('Notification' in window && Notification.permission === 'granted') {
+    void ensurePushSubscription().catch(() => {});
+  }
   unlockIfSignedIn(false).then(signedIn => {
     if (!signedIn) {
       overlay.setAttribute('aria-hidden', 'false');
