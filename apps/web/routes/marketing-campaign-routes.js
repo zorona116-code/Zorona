@@ -15,8 +15,8 @@ function whatsappConfig() {
   const graphVersion = String(process.env.WHATSAPP_GRAPH_API_VERSION || '').trim();
   const missing = [];
   if (!accessToken) missing.push('WHATSAPP_ACCESS_TOKEN');
-  if (!/^\\d{5,30}$/.test(phoneNumberId)) missing.push('WHATSAPP_PHONE_NUMBER_ID');
-  if (!/^v\\d+\\.\\d+$/.test(graphVersion)) missing.push('WHATSAPP_GRAPH_API_VERSION');
+  if (!/^\d{5,30}$/.test(phoneNumberId)) missing.push('WHATSAPP_PHONE_NUMBER_ID');
+  if (!/^v\d+\.\d+$/.test(graphVersion)) missing.push('WHATSAPP_GRAPH_API_VERSION');
   return { accessToken, phoneNumberId, graphVersion, missing, configured: missing.length === 0 };
 }
 
@@ -39,7 +39,7 @@ function campaignError(res, error, fallback) {
 }
 
 function firstName(name) {
-  const value = String(name || '').trim().replace(/\\s+/g, ' ');
+  const value = String(name || '').trim().replace(/\s+/g, ' ');
   return (value.split(' ')[0] || 'عميلنا').slice(0, 80);
 }
 
@@ -55,7 +55,7 @@ async function sendWhatsAppTemplate(config, campaign, recipient) {
   const body = {
     messaging_product: 'whatsapp',
     recipient_type: 'individual',
-    to: String(recipient.phone || '').replace(/\\D/g, ''),
+    to: String(recipient.phone || '').replace(/\D/g, ''),
     type: 'template',
     template: {
       name: campaign.templateName,
