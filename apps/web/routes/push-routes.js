@@ -10,6 +10,23 @@ const isValidBase64Url = (value, min, max) => {
   }
 };
 
+function isSupportedPushEndpoint(endpoint) {
+  try {
+    const url = new URL(endpoint);
+    const host = url.hostname.toLowerCase();
+    return url.protocol === 'https:' && !url.username && !url.password && (
+      host === 'fcm.googleapis.com' ||
+      host === 'web.push.apple.com' ||
+      host === 'notify.windows.com' ||
+      host.endsWith('.notify.windows.com') ||
+      host === 'push.services.mozilla.com' ||
+      host.endsWith('.push.services.mozilla.com')
+    );
+  } catch {
+    return false;
+  }
+}
+
 function isSameOrigin(req) {
   const origin = String(req.get('origin') || '').trim();
   if (!origin) return true;
@@ -34,14 +51,13 @@ export function registerPushRoutes(app, { pushService, saveSubscription, removeS
     const p256dh = String(value?.keys?.p256dh || '').trim();
     const auth = String(value?.keys?.auth || '').trim();
     if (endpoint.length > 2048 || p256dh.length > 120 || auth.length > 120 ||
-        !isValidBase64Url(p256dh, 80, 100) || !isValidBase64Url(auth, 20, 64)) {
-      return res.status(400).json({ message: 'A valid push subscription is required.' });
+        !isValidBase64Url(p256dh, 80, 100) || !isValidBase64Url(auth, 20, 64) ||
+        Buffer.from(p256dh, 'base64url').length !== 65 ||
+        Buffer.from(auth, 'base64url').length !== 16 ||
+        !isSupportedPushEndpoint(endpoint)) {
+      return res.status(400).json({ message: 'A valid browser push subscription is required.' });
     }
     try {
-      const parsed = new URL(endpoint);
-      if (parsed.protocol !== 'https:' || parsed.username || parsed.password) {
-        return res.status(400).json({ message: 'A valid HTTPS push endpoint is required.' });
-      }
       await saveSubscription({
         endpoint,
         p256dh,
