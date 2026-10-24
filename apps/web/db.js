@@ -132,6 +132,32 @@ async function ensureSchema() {
       ALTER TABLE customer_app_coupons ALTER COLUMN discount_percent SET DEFAULT 20;
       UPDATE customer_app_coupons SET discount_percent = 20 WHERE redeemed_at IS NULL;
       CREATE INDEX IF NOT EXISTS customer_app_coupons_redemption_idx ON customer_app_coupons (redeemed_at, issued_at DESC);
+      CREATE TABLE IF NOT EXISTS coupon_campaigns (
+        id BIGSERIAL PRIMARY KEY,
+        code TEXT NOT NULL UNIQUE,
+        title TEXT NOT NULL,
+        discount_percent SMALLINT NOT NULL CHECK (discount_percent BETWEEN 1 AND 100),
+        expires_at TIMESTAMPTZ,
+        minimum_order_amount NUMERIC(10,2) NOT NULL DEFAULT 0 CHECK (minimum_order_amount >= 0),
+        max_uses INTEGER CHECK (max_uses IS NULL OR max_uses >= 1),
+        usage_count INTEGER NOT NULL DEFAULT 0 CHECK (usage_count >= 0),
+        customer_id BIGINT REFERENCES customers(id) ON DELETE CASCADE,
+        enabled BOOLEAN NOT NULL DEFAULT TRUE,
+        created_by TEXT NOT NULL DEFAULT 'admin',
+        created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+      );
+      CREATE INDEX IF NOT EXISTS coupon_campaigns_active_idx ON coupon_campaigns (enabled, expires_at DESC, created_at DESC);
+      CREATE INDEX IF NOT EXISTS coupon_campaigns_customer_idx ON coupon_campaigns (customer_id, created_at DESC);
+      CREATE TABLE IF NOT EXISTS coupon_campaign_redemptions (
+        id BIGSERIAL PRIMARY KEY,
+        campaign_id BIGINT NOT NULL REFERENCES coupon_campaigns(id) ON DELETE CASCADE,
+        customer_id BIGINT REFERENCES customers(id) ON DELETE SET NULL,
+        customer_phone TEXT,
+        order_total NUMERIC(10,2),
+        redeemed_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+        redeemed_by TEXT NOT NULL DEFAULT 'admin'
+      );
+      CREATE INDEX IF NOT EXISTS coupon_campaign_redemptions_campaign_idx ON coupon_campaign_redemptions (campaign_id, redeemed_at DESC);
       ALTER TABLE customers ADD COLUMN IF NOT EXISTS password_hash TEXT;
       ALTER TABLE customers ADD COLUMN IF NOT EXISTS account_created_at TIMESTAMPTZ;
       UPDATE customers SET account_created_at = created_at WHERE password_hash IS NOT NULL AND account_created_at IS NULL;
@@ -736,6 +762,121 @@ export async function listCustomerAppCoupons(limit = 100) {
   const stats = counts.rows[0] || { total: 0, available: 0, redeemed: 0 };
   return { coupons: rows.rows.map(mapCustomerAppCoupon), stats: { total: Number(stats.total || 0), available: Number(stats.available || 0), redeemed: Number(stats.redeemed || 0) } };
 }
+
+function mapCouponCampaign(row) {
+  if (!row) return null;
+  return {
+    id: Number(row.id), code: row.code, title: row.title,
+    discountPercent: Number(row.discountPercent), expiresAt: row.expiresAt || null,
+    minimumOrderAmount: Number(row.minimumOrderAmount || 0),
+    maxUses: row.maxUses === null || row.maxUses === undefined ? null : Number(row.maxUses),
+    usageCount: Number(row.usageCount || 0),
+    customerId: row.customerId === null || row.customerId === undefined ? null : Number(row.customerId),
+    customerName: row.customerName || null, customerPhone: row.customerPhone || null,
+    enabled: row.enabled === true, createdAt: row.createdAt, lastRedeemedAt: row.lastRedeemedAt || null,
+    isExpired: Boolean(row.expiresAt && new Date(row.expiresAt).getTime() <= Date.now()),
+    isExhausted: row.maxUses !== null && row.maxUses !== undefined && Number(row.usageCount || 0) >= Number(row.maxUses)
+  };
+}
+
+const COUPON_CAMPAIGN_SELECT = [
+  'SELECT c.id, c.code, c.title, c.discount_percent AS "discountPercent",',
+  ' c.expires_at AS "expiresAt", c.minimum_order_amount AS "minimumOrderAmount",',
+  ' c.max_uses AS "maxUses", c.usage_count AS "usageCount", c.customer_id AS "customerId",',
+  ' c.enabled, c.created_at AS "createdAt", customer.name AS "customerName", customer.phone AS "customerPhone",',
+  ' (SELECT MAX(r.redeemed_at) FROM coupon_campaign_redemptions r WHERE r.campaign_id = c.id) AS "lastRedeemedAt"',
+  ' FROM coupon_campaigns c LEFT JOIN customers customer ON customer.id = c.customer_id'
+].join('\n');
+
+export async function createCouponCampaign(input) {
+  if (!dbReady) throw accountNotConfiguredError();
+  await ensureSchema();
+  const code = String(input.code || randomBytes(24).toString('base64url'));
+  const title = String(input.title || '').trim().replace(/\s+/g, ' ').slice(0, 100);
+  const discountPercent = Math.trunc(Number(input.discountPercent));
+  const minimumOrderAmount = Number(input.minimumOrderAmount || 0);
+  const maxUses = input.maxUses === null || input.maxUses === undefined || input.maxUses === '' ? null : Math.trunc(Number(input.maxUses));
+  const customerId = input.customerId === null || input.customerId === undefined || input.customerId === '' ? null : Math.trunc(Number(input.customerId));
+  if (title.length < 2 || !Number.isFinite(discountPercent) || discountPercent < 1 || discountPercent > 100 || !Number.isFinite(minimumOrderAmount) || minimumOrderAmount < 0 || (maxUses !== null && (!Number.isInteger(maxUses) || maxUses < 1))) {
+    const error = new Error('بيانات القسيمة غير صالحة.'); error.status = 400; throw error;
+  }
+  const expiry = input.expiresAt ? new Date(input.expiresAt) : null;
+  if (input.expiresAt && Number.isNaN(expiry.getTime())) { const error = new Error('تاريخ الانتهاء غير صالح.'); error.status = 400; throw error; }
+  if (customerId !== null) {
+    const customer = await getPool().query('SELECT id FROM customers WHERE id = $1', [customerId]);
+    if (!customer.rowCount) { const error = new Error('العميل المحدد غير موجود.'); error.status = 404; throw error; }
+  }
+  const result = await getPool().query(
+    'INSERT INTO coupon_campaigns (code, title, discount_percent, expires_at, minimum_order_amount, max_uses, customer_id, enabled, created_by) VALUES ($1,$2,$3,$4,$5,$6,$7,TRUE,$8) RETURNING id, code, title, discount_percent AS "discountPercent", expires_at AS "expiresAt", minimum_order_amount AS "minimumOrderAmount", max_uses AS "maxUses", usage_count AS "usageCount", customer_id AS "customerId", enabled, created_at AS "createdAt"',
+    [code, title, discountPercent, expiry ? expiry.toISOString() : null, minimumOrderAmount, maxUses, customerId, String(input.createdBy || 'admin').slice(0,80)]
+  );
+  return mapCouponCampaign(result.rows[0]);
+}
+
+export async function listCouponCampaigns({ customerId = null, includeInactive = false, limit = 200 } = {}) {
+  if (!dbReady) throw accountNotConfiguredError();
+  await ensureSchema();
+  const safeLimit = Math.min(500, Math.max(1, Math.trunc(Number(limit) || 200)));
+  const result = await getPool().query(
+    COUPON_CAMPAIGN_SELECT +
+    ' WHERE ($1::bigint IS NULL OR c.customer_id IS NULL OR c.customer_id = $1)' +
+    ' AND ($2::boolean = TRUE OR (c.enabled = TRUE AND (c.expires_at IS NULL OR c.expires_at > now()) AND (c.max_uses IS NULL OR c.usage_count < c.max_uses)))' +
+    ' ORDER BY c.created_at DESC LIMIT $3',
+    [customerId, includeInactive, safeLimit]
+  );
+  return result.rows.map(mapCouponCampaign);
+}
+
+export async function getCouponCampaignByCode(code) {
+  if (!dbReady) throw accountNotConfiguredError();
+  await ensureSchema();
+  const result = await getPool().query(COUPON_CAMPAIGN_SELECT + ' WHERE c.code = $1', [code]);
+  return mapCouponCampaign(result.rows[0]);
+}
+
+export async function setCouponCampaignEnabled(id, enabled) {
+  if (!dbReady) throw accountNotConfiguredError();
+  await ensureSchema();
+  const result = await getPool().query('UPDATE coupon_campaigns SET enabled = $2 WHERE id = $1 RETURNING id', [id, enabled === true]);
+  if (!result.rowCount) return null;
+  const campaign = await getPool().query(COUPON_CAMPAIGN_SELECT + ' WHERE c.id = $1', [id]);
+  return mapCouponCampaign(campaign.rows[0]);
+}
+
+export async function redeemCouponCampaign(code, { redeemedBy = 'admin', orderTotal = null } = {}) {
+  if (!dbReady) throw accountNotConfiguredError();
+  await ensureSchema();
+  const client = await getPool().connect();
+  try {
+    await client.query('BEGIN');
+    const found = await client.query('SELECT * FROM coupon_campaigns WHERE code = $1 FOR UPDATE', [code]);
+    if (!found.rowCount) { await client.query('ROLLBACK'); return { status: 'not_found', coupon: null }; }
+    const row = found.rows[0];
+    const current = await client.query(COUPON_CAMPAIGN_SELECT + ' WHERE c.id = $1', [row.id]);
+    const coupon = mapCouponCampaign(current.rows[0]);
+    if (!row.enabled) { await client.query('ROLLBACK'); return { status: 'disabled', coupon }; }
+    if (row.expires_at && new Date(row.expires_at).getTime() <= Date.now()) { await client.query('ROLLBACK'); return { status: 'expired', coupon }; }
+    if (row.max_uses !== null && Number(row.usage_count) >= Number(row.max_uses)) { await client.query('ROLLBACK'); return { status: 'exhausted', coupon }; }
+    if (orderTotal !== null && orderTotal !== undefined && orderTotal !== '') {
+      const total = Number(orderTotal);
+      if (!Number.isFinite(total) || total < Number(row.minimum_order_amount || 0)) { await client.query('ROLLBACK'); return { status: 'minimum_order', coupon, minimumOrderAmount: Number(row.minimum_order_amount || 0) }; }
+    } else if (Number(row.minimum_order_amount || 0) > 0) {
+      await client.query('ROLLBACK'); return { status: 'minimum_order', coupon, minimumOrderAmount: Number(row.minimum_order_amount || 0) };
+    }
+    await client.query('UPDATE coupon_campaigns SET usage_count = usage_count + 1 WHERE id = $1', [row.id]);
+    await client.query(
+      'INSERT INTO coupon_campaign_redemptions (campaign_id, customer_id, customer_phone, order_total, redeemed_by) VALUES ($1,$2,$3,$4,$5)',
+      [row.id, row.customer_id, coupon.customerPhone, orderTotal === null || orderTotal === '' ? null : Number(orderTotal), String(redeemedBy || 'admin').slice(0,80)]
+    );
+    const updated = await client.query(COUPON_CAMPAIGN_SELECT + ' WHERE c.id = $1', [row.id]);
+    await client.query('COMMIT');
+    return { status: 'redeemed', coupon: mapCouponCampaign(updated.rows[0]) };
+  } catch (error) {
+    try { await client.query('ROLLBACK'); } catch {}
+    throw error;
+  } finally { client.release(); }
+}
+
 export async function redeemCustomerAppCoupon(code, redeemedBy = 'admin') {
   if (!dbReady) throw accountNotConfiguredError();
   await ensureSchema();
