@@ -2,7 +2,7 @@ import express from 'express';
 import path from 'node:path';
 import { fileURLToPath } from 'url';
 import { presign, storageReady, deleteObject } from './storage.js';
-import { dbReady, readJsonWithStatus, writeJson, dbHealthCheck, closeDbPool, migrateLegacySnapshots } from './db.js';
+import { dbReady, readJsonWithStatus, writeJson, dbHealthCheck, closeDbPool, migrateLegacySnapshots, saveWebPushSubscription, deleteWebPushSubscription, listWebPushSubscriptions } from './db.js';
 import { serviceErrorHandler, logServiceFailure } from './utils/service-error.js';
 import { cleanText, cleanKey, cleanUrl, normalizeList } from './utils/input.js';
 import { categories, products } from './menu-data.js';
@@ -21,6 +21,8 @@ import { createReservationService } from './services/reservation-service.js';
 import { registerReservationRoutes } from './routes/reservation-routes.js';
 import { registerCustomerRoutes } from './routes/customer-routes.js';
 import { registerCustomerAccountRoutes } from './routes/customer-account-routes.js';
+import { registerPushRoutes } from './routes/push-routes.js';
+import { createWebPushService } from './services/web-push-service.js';
 import { registerCouponRoutes } from './routes/coupon-routes.js';
 import { registerMarketingCampaignRoutes } from './routes/marketing-campaign-routes.js';
 import { createRateLimiter } from './middleware/rate-limit.js';
@@ -79,6 +81,16 @@ const stateStore = createStateStore({
 const { persist: persistState, flush: flushPersistState } = stateStore;
 const stateRepository = createStateRepository({ products, categories, reservations, persist: persistState });
 
+const webPushService = createWebPushService({
+  listSubscriptions: listWebPushSubscriptions,
+  removeSubscription: deleteWebPushSubscription
+});
+registerPushRoutes(app, {
+  pushService: webPushService,
+  saveSubscription: saveWebPushSubscription,
+  removeSubscription: deleteWebPushSubscription
+});
+
 const smartMenu = createSmartMenuService({
   normalizeList,
   presign,
@@ -92,7 +104,12 @@ const promotionService=createPromotionService({
   writeJson,
   storageReady,
   persistenceReady: dbReady || (!isProductionRuntime && storageReady),
-  allowEphemeral: !isProductionRuntime
+  allowEphemeral: !isProductionRuntime,
+  onTodayOfferPublished: (offer) => webPushService.notifyAll({
+    title: offer.badge || 'عرض جديد من ZORONA',
+    body: [offer.title, offer.message].filter(Boolean).join(' — '),
+    url: '/offers'
+  })
 });
 registerPromotionRoutes(app,{service:promotionService,requireAdminApiKey});
 const categoryService=createCategoryService({categoriesRepository:stateRepository.categories,productsRepository:stateRepository.products,storageReady,dbReady,presign,readJsonWithStatus,writeJson,deleteObject,isAdminApiKeyValid});
@@ -141,6 +158,11 @@ registerProductRoutes(app, {
   smartSnapshot,
   withMediaUrls,
   invalidateSmartSnapshot,
+  onProductPublished: (product) => webPushService.notifyAll({
+    title: 'جديد في منيو ZORONA',
+    body: product.nameAr || product.nameEn || 'اكتشف صنفًا جديدًا في المنيو.',
+    url: '/menu'
+  }),
   nextProductId,
   maxVideoBytes: MAX_VIDEO_BYTES,
   videoTypes: VIDEO_TYPES
