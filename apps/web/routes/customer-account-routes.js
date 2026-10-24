@@ -148,10 +148,17 @@ export function registerCustomerAccountRoutes(app, {
     if (name.length < 2) return res.status(400).json({ code: 'INVALID_NAME', message: 'اكتب الاسم كاملًا.' });
     if (!/^\+[1-9]\d{7,14}$/.test(phone)) return res.status(400).json({ code: 'INVALID_PHONE', message: 'اكتب رقم الهاتف مع مفتاح الدولة مثل +971.' });
     if (password.length < 8 || password.length > 128) return res.status(400).json({ code: 'INVALID_PASSWORD', message: 'كلمة السر لازم تكون 8 أحرف على الأقل.' });
+    if (req.body?.whatsappMarketingConsent !== true) {
+      return res.status(400).json({
+        code: 'WHATSAPP_CONSENT_REQUIRED',
+        message: 'لازم توافق على تلقي رسائل وعروض ZORONA عبر واتساب لإتمام التسجيل.'
+      });
+    }
     try {
       const passwordHash = await hashPassword(password);
       const token = randomBytes(32).toString('base64url');
-      const customer = await registerCustomerAccount(name, phone, passwordHash, token);
+      const consentLanguage = req.body?.consentLanguage === 'en' ? 'en' : 'ar';
+      const customer = await registerCustomerAccount(name, phone, passwordHash, token, true, consentLanguage);
       setSessionCookie(res, token);
       return res.status(201).json({ ok: true, customer: publicCustomer(customer) });
     } catch (error) {
@@ -331,8 +338,8 @@ export function registerCustomerAccountRoutes(app, {
     res.setHeader('Cache-Control', 'no-store');
     const token = readSessionToken(req);
     if (!token) return res.status(401).json({ code: 'NOT_SIGNED_IN', message: 'سجّل الدخول أولًا.' });
-    if (typeof req.body?.sms !== 'boolean' || typeof req.body?.whatsapp !== 'boolean') {
-      return res.status(400).json({ code: 'INVALID_PREFERENCES', message: 'حدد تفضيلات الرسائل لكل قناة.' });
+    if (typeof req.body?.whatsapp !== 'boolean') {
+      return res.status(400).json({ code: 'INVALID_PREFERENCES', message: 'حدد تفضيل رسائل واتساب.' });
     }
     try {
       const customer = await getCustomerAccountFromSession(token);
@@ -341,7 +348,7 @@ export function registerCustomerAccountRoutes(app, {
         return res.status(401).json({ code: 'SESSION_EXPIRED', message: 'انتهت الجلسة. سجّل الدخول مرة أخرى.' });
       }
       const language = req.body?.language === 'en' ? 'en' : 'ar';
-      await setCustomerMarketingConsent(customer.id, 'sms', req.body.sms, language);
+      await setCustomerMarketingConsent(customer.id, 'sms', false, language);
       const updated = await setCustomerMarketingConsent(customer.id, 'whatsapp', req.body.whatsapp, language);
       return res.json({ ok: true, customer: publicCustomer(updated || customer) });
     } catch {
