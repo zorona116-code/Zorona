@@ -58,7 +58,7 @@ function syncSidebarState(){
     toggle.querySelector('span').textContent=collapsed?'›':'‹';
   }
 }
-function showSection(sectionId){document.querySelectorAll('.admin-section').forEach(s=>s.classList.remove('section-visible'));document.querySelectorAll('[data-section]').forEach(link=>link.classList.toggle('active',link.dataset.section===sectionId));const titleMap={dashboard:'نظرة عامة',products:'إدارة الأصناف',categories:'إدارة الأقسام',offers:'عروض اليوم',reservations:'حجوزات الطاولات',customers:'العملاء والإشعارات',marketing:'حملات واتساب',coupons:'قسائم خصم التطبيق',settings:'إعدادات الموقع'};$('#page-title').textContent=titleMap[sectionId]||'إدارة ZORONA';$('#dashboard-stats').style.display=sectionId==='dashboard'?'':'none';if(sectionId==='dashboard')return;const section=document.getElementById(sectionId);if(section)section.classList.add('section-visible');}
+function showSection(sectionId){document.querySelectorAll('.admin-section').forEach(s=>s.classList.remove('section-visible'));document.querySelectorAll('[data-section]').forEach(link=>link.classList.toggle('active',link.dataset.section===sectionId));const titleMap={dashboard:'نظرة عامة',products:'إدارة الأصناف',categories:'إدارة الأقسام',offers:'عروض اليوم',reservations:'حجوزات الطاولات',customers:'العملاء والإشعارات',marketing:'حملات واتساب',coupons:'قسائم خصم التطبيق','hero-banner':'البانر الرئيسي',settings:'إعدادات الموقع'};$('#page-title').textContent=titleMap[sectionId]||'إدارة ZORONA';$('#dashboard-stats').style.display=sectionId==='dashboard'?'':'none';if(sectionId==='dashboard')return;const section=document.getElementById(sectionId);if(section)section.classList.add('section-visible');}
 async function load(){
   $('#connection').textContent='جارٍ الاتصال…';
   const resources=[
