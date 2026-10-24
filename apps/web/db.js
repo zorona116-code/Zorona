@@ -100,6 +100,12 @@ async function ensureSchema() {
         created_at TIMESTAMPTZ NOT NULL DEFAULT now()
       );
 
+      ALTER TABLE customers ADD COLUMN IF NOT EXISTS sms_marketing_consent BOOLEAN NOT NULL DEFAULT FALSE;
+      ALTER TABLE customers ADD COLUMN IF NOT EXISTS whatsapp_marketing_consent BOOLEAN NOT NULL DEFAULT FALSE;
+      ALTER TABLE customers ADD COLUMN IF NOT EXISTS sms_consent_at TIMESTAMPTZ;
+      ALTER TABLE customers ADD COLUMN IF NOT EXISTS whatsapp_consent_at TIMESTAMPTZ;
+      ALTER TABLE customers ADD COLUMN IF NOT EXISTS sms_unsubscribed_at TIMESTAMPTZ;
+      ALTER TABLE customers ADD COLUMN IF NOT EXISTS whatsapp_unsubscribed_at TIMESTAMPTZ;
       CREATE INDEX IF NOT EXISTS customers_sms_opt_in_idx ON customers (last_seen_at DESC) WHERE sms_marketing_consent = TRUE;
       CREATE INDEX IF NOT EXISTS customers_whatsapp_opt_in_idx ON customers (last_seen_at DESC) WHERE whatsapp_marketing_consent = TRUE;
 
