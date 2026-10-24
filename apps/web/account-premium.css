@@ -1,0 +1,85 @@
+/* Premium dark-and-gold account experience for the installed ZORONA app */
+.account-page{--account-border:rgba(219,190,128,.19);--account-panel:#101112;--account-gold:#e4bd69;--account-ink:#f6f0e5;--account-muted:#b9b3a9;background:#070808;color:var(--account-ink);min-height:100vh}
+.account-page .app-header{background:#080909;border-bottom:1px solid rgba(228,189,105,.13)}
+.account-page .brand{color:#e8c779}
+.account-page .brand span{color:#aaa08e}
+.account-shell{width:min(980px,calc(100% - 28px));padding:22px 0 64px}
+.account-hero{min-height:0;padding:18px 8px 22px;border-radius:0;background:transparent;color:#fff}
+.account-eyebrow{color:#d8b566;letter-spacing:2px}
+.account-hero h1{font:800 clamp(30px,5vw,44px)/1.35 Cairo,sans-serif;max-width:100%;color:#fff}
+.account-hero>p:last-of-type{max-width:650px;margin-top:6px;color:#bdb6a9;font-size:13px}
+.account-hero-mark{display:none}
+.account-login-card{margin:8px 0 0;border-color:var(--account-border);background:linear-gradient(145deg,#171819,#0c0d0e);color:#f6f0e5;box-shadow:0 18px 50px #0008}
+.account-card-heading h2,.account-welcome h2{color:#fff}
+.account-muted{color:#bdb6a9}
+.account-icon{background:#2a2113;color:#e9c77b;border:1px solid #7d6335}
+.account-dashboard{display:flex;flex-direction:column;gap:18px;margin-top:12px}
+.account-welcome{order:0;padding:15px 17px;border-color:var(--account-border);border-radius:18px;background:linear-gradient(120deg,#171819,#0d0e0f);color:#fff}
+.account-welcome h2{font-size:20px}
+.account-welcome .account-kicker{color:#d8b566}
+.account-logout{border-color:#4a3a21;background:#191613;color:#e4c27c}
+.account-coupon-section{order:1}
+.account-campaign-coupons-section{order:2}
+.account-dashboard>.account-section:nth-of-type(3){order:3}
+.account-dashboard>.account-section:nth-of-type(4){order:4}
+.account-stat-grid{order:5;gap:10px}
+.account-stat{padding:13px;border-color:var(--account-border);border-radius:16px;background:#111213;color:#f7f0e4}
+.account-stat-icon{background:#292114;color:#e4bd69}
+.account-stat strong{color:#f2d38e}
+.account-stat>span:last-child{color:#bdb5a7}
+.account-section-heading{align-items:center;margin-bottom:12px}
+.account-section-heading h2{font:800 clamp(21px,3.5vw,28px)/1.4 Cairo,sans-serif;color:#f8f3e9}
+.account-section-heading .account-kicker{color:#cba85f}
+.account-text-link{color:#e5c477}
+.account-coupon-card{position:relative;overflow:hidden;padding:20px;border:1px solid #b8934c;border-radius:20px;background:radial-gradient(circle at 8% 10%,#493719 0,transparent 38%),linear-gradient(130deg,#1b1b19,#080909 75%);box-shadow:0 14px 36px #0007}
+.account-coupon-card:before{content:"";position:absolute;inset:7px;border:1px solid #d6b15e33;border-radius:15px;pointer-events:none}
+.account-coupon-lead{color:#c8bda8}
+.account-coupon-details>strong{color:#f0d18b}
+.account-coupon-status{background:#d9c18d;color:#322411}
+.account-coupon-details>code{border-color:#987943;background:#080909;color:#ffe7ad}
+.account-coupon-details>small,.account-coupon-code-label{color:#c8b99a}
+.account-coupon-message{color:#d6c9b2}
+.account-coupon-retry{background:#e4c477;border-color:#e4c477;color:#1b150b}
+.account-campaign-coupons-intro{color:#b7b0a4}
+.account-campaign-coupon-card{border-color:var(--account-border);background:linear-gradient(145deg,#171819,#0d0e0f);color:#f6f0e5}
+.account-campaign-coupon-card h3,.account-campaign-coupon-card strong{color:#f2d28a}
+.account-campaign-coupon-card p,.account-campaign-coupon-card small{color:#c0b7a7}
+.account-reservation,.account-product-card{border-color:var(--account-border);background:#111213;color:#f7f0e4}
+.account-date-mark{background:#292114;color:#f0d18b}
+.account-reservation-details p,.account-reservation-details>small{color:#bdb4a5}
+.account-status{background:#302718;color:#e6c679}
+.account-status-confirmed{background:#173123;color:#9bd3a8}
+.account-status-cancelled{background:#3a211e;color:#e7a89c}
+.account-product-placeholder{background:radial-gradient(circle,#342b1b,#17130e);color:#e3bf6d}
+.account-product-body h3{color:#f6f0e5}
+.account-product-price{color:#e6c579}
+.account-favorite-button{border-color:#6e5832;background:#211b12;color:#ebcb82}
+.account-favorite-button.is-saved{border-color:#d8b363;background:#d8b363;color:#171109}
+.account-empty{border-color:#51432d;color:#bcb2a1;background:#101112}
+.account-message{color:#bdb4a5}
+.account-page footer{border-top:1px solid #27221a;background:#090a0a;color:#a69a84}
+.account-page footer strong{color:#e5c477}
+@media(max-width:600px){
+ .account-shell{width:calc(100% - 22px);padding-top:10px;padding-bottom:40px}
+ .account-hero{padding:13px 5px 18px}
+ .account-hero h1{font-size:29px}
+ .account-hero>p:last-of-type{max-width:100%;font-size:12px}
+ .account-dashboard{gap:17px}
+ .account-welcome{padding:13px;border-radius:15px}
+ .account-welcome h2{font-size:17px}
+ .account-stat-grid{gap:7px}
+ .account-stat{padding:11px 8px}
+ .account-stat strong{font-size:22px}
+ .account-coupon-card{padding:16px}
+ .account-coupon-body{grid-template-columns:minmax(0,1fr);gap:13px}
+ .account-coupon-qr-wrap{width:min(100%,190px);margin-inline:auto;min-height:0}
+ .account-coupon-details{justify-items:center;text-align:center}
+ .account-coupon-details>strong{font-size:30px}
+ .account-campaign-coupons-list{grid-template-columns:minmax(0,1fr);gap:10px}
+ .account-campaign-coupon-card{grid-template-columns:92px minmax(0,1fr);gap:12px;padding:12px}
+ .account-campaign-coupon-qr{padding:5px}
+ .account-section-heading h2{font-size:22px}
+}
+@media(min-width:761px){
+ .account-page .app-header{padding-inline:max(22px,calc((100% - 980px)/2))}
+}
