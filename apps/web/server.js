@@ -22,6 +22,7 @@ import { registerReservationRoutes } from './routes/reservation-routes.js';
 import { registerCustomerRoutes } from './routes/customer-routes.js';
 import { registerCustomerAccountRoutes } from './routes/customer-account-routes.js';
 import { registerCouponRoutes } from './routes/coupon-routes.js';
+import { registerMarketingCampaignRoutes } from './routes/marketing-campaign-routes.js';
 import { createRateLimiter } from './middleware/rate-limit.js';
 import { configureHttpSecurity } from './middleware/http-security.js';
 import { createNextPrefixedId } from './utils/id-generator.js';
@@ -158,6 +159,7 @@ registerReservationRoutes(app, {
 });
 registerCustomerRoutes(app, { requireAdminApiKey });
 registerCouponRoutes(app, { requireAdminApiKey });
+registerMarketingCampaignRoutes(app, { requireAdminApiKey });
 registerCustomerAccountRoutes(app, {
   reservations: stateRepository.reservations,
   products: stateRepository.products,
