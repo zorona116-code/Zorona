@@ -798,7 +798,7 @@ export async function createCouponCampaign(input) {
   const maxUses = input.maxUses === null || input.maxUses === undefined || input.maxUses === '' ? null : Math.trunc(Number(input.maxUses));
   let customerId = input.customerId === null || input.customerId === undefined || input.customerId === '' ? null : Math.trunc(Number(input.customerId));
   if (customerId === null && input.customerPhone) {
-    const target = await getPool().query('SELECT id FROM customers WHERE phone = $1', [String(input.customerPhone).trim()]);
+    const target = await getPool().query('SELECT id FROM customers WHERE phone = $1 AND password_hash IS NOT NULL', [String(input.customerPhone).trim()]);
     if (!target.rowCount) { const error = new Error('لم يتم العثور على عميل بهذا الرقم. يجب أن يكون لديه حساب في ZORONA أولًا.'); error.status = 404; throw error; }
     customerId = Number(target.rows[0].id);
   }
