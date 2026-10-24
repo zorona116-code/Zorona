@@ -38,6 +38,20 @@ html.pwa-installed:not(.pwa-authenticated) body>:not(#pwa-auth-overlay){visibili
 .pwa-auth-message{min-height:20px;margin:13px 0 0;text-align:center;color:#f0c5a8;font-size:11px;line-height:1.8}
 .pwa-auth-message:empty{display:none}
 .pwa-auth-foot{margin:16px 0 0;text-align:center;color:#847969;font-size:10px;line-height:1.8}
+
+.pwa-coupon-overlay{display:none;position:fixed;inset:0;z-index:99998;overflow:auto;place-items:center;padding:20px;background:rgba(8,7,6,.82);backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px);color:#f8f0e1}
+.pwa-coupon-overlay.is-open{display:grid}
+.pwa-coupon-card{position:relative;width:min(420px,100%);padding:28px 24px 24px;border:1px solid rgba(230,201,145,.28);border-radius:28px;background:linear-gradient(155deg,#2a2117,#100e0c 75%);box-shadow:0 28px 90px rgba(0,0,0,.55);text-align:center}
+.pwa-coupon-close{position:absolute;inset-inline-end:13px;top:13px;width:34px;height:34px;border:1px solid rgba(255,255,255,.14);border-radius:50%;background:rgba(255,255,255,.06);color:#fff;font-size:21px;cursor:pointer}
+.pwa-coupon-tag{display:inline-flex;padding:6px 11px;border:1px solid rgba(230,201,145,.23);border-radius:999px;color:#e7c992;font-size:9px;font-weight:900;letter-spacing:2px}
+.pwa-coupon-card h2{margin:16px 0 7px;color:#fff3db;font:600 clamp(29px,8vw,38px)/1.2 Cairo,sans-serif}
+.pwa-coupon-card p{margin:0 auto 16px;max-width:300px;color:#c8bca9;font-size:12px;line-height:1.9}
+.pwa-coupon-qr{display:block;width:min(260px,100%);aspect-ratio:1;object-fit:contain;margin:14px auto 12px;padding:10px;border:1px solid #e9dfce;border-radius:18px;background:#fff}
+.pwa-coupon-qr[hidden]{display:none!important}
+.pwa-coupon-code{display:block;width:max-content;max-width:100%;margin:10px auto;padding:7px 12px;border:1px dashed rgba(230,201,145,.38);border-radius:9px;color:#f1dbb4;font:700 12px/1.5 monospace;overflow-wrap:anywhere;direction:ltr}
+.pwa-coupon-code[hidden]{display:none!important}
+.pwa-coupon-foot{margin-top:14px!important;color:#8d816f!important;font-size:10px!important}
+.pwa-coupon-dismiss{width:100%;min-height:46px;margin-top:4px;border:0;border-radius:999px;background:#c59a5b;color:#17130f;font:900 12px Cairo,sans-serif;cursor:pointer}
 </style>
 </head>
 <body class="home-app">
@@ -75,6 +89,18 @@ html.pwa-installed:not(.pwa-authenticated) body>:not(#pwa-auth-overlay){visibili
     <p id="pwa-auth-message" class="pwa-auth-message" role="status" aria-live="polite"></p>
     <p class="pwa-auth-foot">لن يُطلب منك كود تحقق عبر الرسائل.</p>
   </div>
+</div>
+<div id="pwa-coupon-overlay" class="pwa-coupon-overlay" role="dialog" aria-modal="true" aria-labelledby="pwa-coupon-title" aria-hidden="true">
+  <section class="pwa-coupon-card">
+    <button id="pwa-coupon-close" class="pwa-coupon-close" type="button" aria-label="إغلاق">×</button>
+    <span class="pwa-coupon-tag">ZORONA APP REWARD</span>
+    <h2 id="pwa-coupon-title">قسيمة خصم 10%</h2>
+    <p id="pwa-coupon-message">اعرض رمز QR للموظف عند الدفع. القسيمة صالحة للاستخدام مرة واحدة.</p>
+    <img id="pwa-coupon-qr" class="pwa-coupon-qr" alt="رمز QR لقسيمة خصم ZORONA" hidden>
+    <code id="pwa-coupon-code" class="pwa-coupon-code" hidden></code>
+    <p class="pwa-coupon-foot">استخدام واحد فقط لكل حساب. عند صرف القسيمة ستظهر كـ«مستخدمة».</p>
+    <button id="pwa-coupon-dismiss" class="pwa-coupon-dismiss" type="button">متابعة التصفح</button>
+  </section>
 </div>
 <header class="app-header">
   <a class="brand" href="/" aria-label="ZORONA">
