@@ -128,7 +128,7 @@
     banner.setAttribute('aria-label', 'تثبيت تطبيق ZORONA');
     banner.innerHTML = `
       <span class="zorona-install-mark" aria-hidden="true">Z</span>
-      <div class="zorona-install-copy"><strong>ثبّت تطبيق ZORONA واحصل على خصم 10%</strong><span>قسيمة QR خاصة بك — صالحة للاستخدام مرة واحدة.</span></div>
+      <div class="zorona-install-copy"><strong>ثبّت تطبيق ZORONA واحصل على خصم 20%</strong><span>قسيمة QR خاصة بك — صالحة للاستخدام مرة واحدة.</span></div>
       <button class="zorona-install-action" type="button">تثبيت والحصول على الخصم</button>
       <button class="zorona-install-close" type="button" aria-label="إغلاق الإشعار">×</button>
     `;
