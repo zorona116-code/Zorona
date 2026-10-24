@@ -410,8 +410,8 @@ redeemButton?.addEventListener('click', async () => {
     if (currentCoupon?.couponKind === 'campaign' || currentCoupon?.campaignId) void refreshCampaignList();
   } catch (error) {
     setCameraStatus(error.message || 'تعذر تسجيل صرف القسيمة.', 'error');
-    if (error.status === 400) {
-      $('#coupon-result-message').textContent = error.message || 'تحقق من الحد الأدنى للطلب. ';
+    if (error.status === 400 || error.status === 403) {
+      $('#coupon-result-message').textContent = error.message || 'راجع شروط القسيمة ثم حاول مرة أخرى.';
     } else {
       try {
         const response = await request('/api/admin/coupons/lookup?code=' + encodeURIComponent(currentCoupon.code));
