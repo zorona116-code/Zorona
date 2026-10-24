@@ -6,6 +6,7 @@ import {
   listCustomerFavoriteIds,
   revokeCustomerAccountSession,
   setCustomerFavorite,
+  setCustomerMarketingConsent,
   updateCustomerAccountName
 } from '../db.js';
 
@@ -259,6 +260,28 @@ export function registerCustomerAccountRoutes(app, {
       return res.json({ ok: true, favoriteIds: await listCustomerFavoriteIds(customer.id) });
     } catch {
       return res.status(503).json({ code: 'FAVORITE_SAVE_FAILED', message: 'تعذر حفظ المفضلة الآن.' });
+    }
+  });
+
+  app.patch('/api/account/marketing-preferences', requireSameOrigin, async (req, res) => {
+    res.setHeader('Cache-Control', 'no-store');
+    const token = readSessionToken(req);
+    if (!token) return res.status(401).json({ code: 'NOT_SIGNED_IN', message: 'سجّل الدخول أولًا.' });
+    if (typeof req.body?.sms !== 'boolean' || typeof req.body?.whatsapp !== 'boolean') {
+      return res.status(400).json({ code: 'INVALID_PREFERENCES', message: 'حدد تفضيلات الرسائل لكل قناة.' });
+    }
+    try {
+      const customer = await getCustomerAccountFromSession(token);
+      if (!customer) {
+        clearSessionCookie(res);
+        return res.status(401).json({ code: 'SESSION_EXPIRED', message: 'انتهت الجلسة. سجّل الدخول مرة أخرى.' });
+      }
+      const language = req.body?.language === 'en' ? 'en' : 'ar';
+      await setCustomerMarketingConsent(customer.id, 'sms', req.body.sms, language);
+      const updated = await setCustomerMarketingConsent(customer.id, 'whatsapp', req.body.whatsapp, language);
+      return res.json({ ok: true, customer: publicCustomer(updated || customer) });
+    } catch {
+      return res.status(503).json({ code: 'PREFERENCES_SAVE_FAILED', message: 'تعذر حفظ تفضيلات الرسائل الآن.' });
     }
   });
 
