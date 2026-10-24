@@ -4,7 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = path.dirname(fileURLToPath(import.meta.url));
-const standaloneAssetNames = new Set(['smart-menu.js', 'product-page.js', 'offers-page.js', 'reservation.js', 'app-pages.css', 'app-header.js', 'home-app.css', 'home.js']);
+const standaloneAssetNames = new Set(['smart-menu.js', 'product-page.js', 'offers-page.js', 'reservation.js', 'app-pages.css', 'app-header.js', 'home-app.css', 'home.js', 'customer-account.css', 'customer-account.js']);
 const legacyCleanupAssetNames = new Set(['sw.js']);
 
 function standaloneMenuPages() {
