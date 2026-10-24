@@ -29,9 +29,9 @@
       favoritesEmpty: 'لسه ما أضفتش أصناف للمفضلة. اختار من القائمة بالأسفل.',
       discoverMore: 'اكتشف المزيد', suggestionsTitle: 'أصناف من المنيو',
       catalogEmpty: 'لا توجد أصناف متاحة للعرض حاليًا.', yourDetails: 'تفاصيلك',
-      profileTitle: 'بيانات الحساب', nameLabel: 'الاسم', smsPreference: 'أوافق على تلقي رسائل SMS تسويقية من ZORONA. الموافقة اختيارية ويمكن إلغاؤها في أي وقت.',
+      profileTitle: 'بيانات الحساب', nameLabel: 'الاسم',
       whatsappPreference: 'أوافق على تلقي عروض تسويقية من ZORONA عبر WhatsApp. الموافقة اختيارية ويمكن إلغاؤها في أي وقت.',
-      consentHelp: 'كل قناة اختيارية ومستقلة. لن تتغير تفضيلاتك إلا بعد الضغط على حفظ التفضيلات.',
+      consentHelp: 'التسويق عبر واتساب فقط. يمكنك إلغاء الموافقة في أي وقت، ولن نرسل عروضًا تسويقية عبر SMS.',
       saveProfile: 'حفظ الاسم', savePreferences: 'حفظ تفضيلات الرسائل', addFavorite: 'أضف للمفضلة', removeFavorite: 'إزالة من المفضلة',
       noReservations: 'ما عندكش حجوزات مسجلة حتى الآن.', reservation: 'حجز', guests: 'أشخاص',
       pending: 'قيد المراجعة', confirmed: 'مؤكد', cancelled: 'ملغي',
@@ -60,9 +60,9 @@
       favoritesEmpty: 'You have not saved any dishes yet. Choose from the menu below.',
       discoverMore: 'Discover more', suggestionsTitle: 'From the menu',
       catalogEmpty: 'No dishes are available right now.', yourDetails: 'Your details',
-      profileTitle: 'Account profile', nameLabel: 'Name', smsPreference: 'I agree to receive marketing SMS from ZORONA. This is optional and can be withdrawn at any time.',
+      profileTitle: 'Account profile', nameLabel: 'Name',
       whatsappPreference: 'I agree to receive marketing offers from ZORONA through WhatsApp. This is optional and can be withdrawn at any time.',
-      consentHelp: 'Each channel is optional and independent. Preferences change only after you save them.',
+      consentHelp: 'Marketing is via WhatsApp only. You can withdraw consent at any time; we do not send SMS marketing offers.',
       saveProfile: 'Save name', savePreferences: 'Save messaging preferences', addFavorite: 'Add to favourites', removeFavorite: 'Remove favourite',
       noReservations: 'You do not have any reservations yet.', reservation: 'Reservation', guests: 'guests',
       pending: 'Pending', confirmed: 'Confirmed', cancelled: 'Cancelled',
@@ -379,7 +379,6 @@
     $('#customer-name-heading').textContent = data.customer?.name || 'ZORONA';
     $('#customer-phone-heading').textContent = data.customer?.phone || '';
     $('#account-profile-name').value = data.customer?.name || '';
-    $('#account-sms-consent').checked = data.customer?.smsMarketingConsent === true;
     $('#account-whatsapp-consent').checked = data.customer?.whatsappMarketingConsent === true;
     const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dubai', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
     const upcoming = (data.reservations || []).filter(item => item.date >= today && item.status !== 'cancelled');
@@ -447,7 +446,6 @@
       const result = await api('/api/account/marketing-preferences', {
         method: 'PATCH',
         body: {
-          sms: $('#account-sms-consent').checked,
           whatsapp: $('#account-whatsapp-consent').checked,
           language
         }
