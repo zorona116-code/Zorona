@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#17130f">
+<link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
+<link rel="icon" href="/icons/icon-192.png" sizes="192x192" type="image/png">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<meta name="description" content="احجز طاولتك في ZORONA Restaurant & Cafe.">
+<title>حجز طاولة — ZORONA</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&family=Playfair+Display:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/home-app.css">
+</head>
+<body class="home-app reservation-route">
+<header class="app-header is-page" aria-label="ZORONA">
+  <a class="brand" href="/" aria-label="ZORONA">ZORONA<span>RESTAURANT & CAFE</span></a>
+  <nav class="header-nav" id="app-header-nav" aria-label="التنقل الرئيسي">
+    <a href="/">الرئيسية</a><a href="/menu">المنيو</a><a href="/offers">عروض اليوم</a><a href="/reservation">حجز طاولة</a>
+  </nav>
+  <div class="app-header-actions">
+    <button class="lang" id="lang-toggle" type="button" aria-label="تغيير اللغة">EN</button>
+    <button class="app-menu-button" id="app-menu-button" type="button" aria-expanded="false" aria-controls="app-header-nav" aria-label="فتح القائمة">☰</button>
+  </div>
+</header>
+
+<main>
+  <section id="reservation" class="reservation-panel">
+    <div class="reservation-head">
+      <p class="app-eyebrow">TABLE RESERVATION</p>
+      <h2 data-i18n="title">احجز طاولتك</h2>
+      <p data-i18n="lead">اختر التاريخ والوقت وعدد الأشخاص وسنتواصل معك لتأكيد الحجز.</p>
+    </div>
+    <form id="reservation-form" class="reservation-form">
+      <label><span data-i18n="name">الاسم</span><input id="reservation-name" required autocomplete="name"></label>
+      <label><span data-i18n="phone">رقم الهاتف</span><input id="reservation-phone" type="tel" required autocomplete="tel"></label>
+      <label><span data-i18n="date">التاريخ</span><input id="reservation-date" type="date" required></label>
+      <label><span data-i18n="time">الوقت</span><input id="reservation-time" type="time" required></label>
+      <label><span data-i18n="guests">عدد الأشخاص</span><select id="reservation-guests" required></select></label>
+      <label class="full"><span data-i18n="notes">ملاحظات</span><textarea id="reservation-notes" rows="3" data-i18n-placeholder="notesPlaceholder" placeholder="مثلاً: طاولة داخلية، مناسبة خاصة…"></textarea></label>
+      <button class="gold-btn full" type="submit" data-i18n="submit">إرسال طلب الحجز</button>
+      <p id="reservation-message" class="reservation-message" role="status" aria-live="polite"></p>
+    </form>
+  </section>
+</main>
+
+<footer id="contact">
+  <strong>ZORONA</strong><span>Restaurant & Cafe</span>
+  <small>© 2026 ZORONA. All rights reserved.</small>
+</footer>
+
+<script type="module" src="/app-header.js"></script>
+<script type="module" src="/reservation.js"></script>
+</body>
+</html>

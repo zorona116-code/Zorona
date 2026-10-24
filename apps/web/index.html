@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#191714">
+<meta name="description" content="ZORONA Restaurant & Cafe — مطعم تركي ولبناني، تصفّح المنيو واحجز طاولتك.">
+<link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
+<link rel="icon" href="/icons/icon-192.png" sizes="192x192" type="image/png">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<title>ZORONA — Turkish & Lebanese Restaurant</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&family=Playfair+Display:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./home-app.css">
+<link rel="stylesheet" href="./home-redesign.css">
+</head>
+<body class="home-app">
+<header class="app-header">
+  <a class="brand" href="/" aria-label="ZORONA">
+    ZORONA<span>TURKISH &amp; LEBANESE RESTAURANT</span>
+  </a>
+  <nav class="header-nav" id="app-header-nav" aria-label="القائمة الرئيسية">
+    <a href="/" aria-current="page">الرئيسية</a>
+    <a href="/menu">المنيو</a>
+    <a href="/offers">عروض اليوم</a>
+    <a href="/reservation">حجز طاولة</a>
+  </nav>
+  <div class="app-header-actions">
+    <button class="lang" id="lang-toggle" type="button" aria-label="تغيير اللغة">EN</button>
+    <a class="header-reservation" href="/reservation">احجز طاولتك <span aria-hidden="true">↖</span></a>
+    <button class="app-menu-button" id="app-menu-button" type="button" aria-expanded="false" aria-controls="app-header-nav" aria-label="فتح القائمة">☰</button>
+  </div>
+</header>
+
+<main>
+  <section id="home" class="app-hero" aria-labelledby="hero-title">
+    <div class="app-hero-media" role="img" aria-label="الواجهة الخارجية لمطعم ZORONA">
+      <div class="hero-photo-caption"><span class="caption-mark" aria-hidden="true"></span><span>AJMAN · UAE</span><span class="caption-divider">/</span><span>TURKISH &amp; LEBANESE</span></div>
+    </div>
+    <div class="app-hero-copy">
+      <p class="app-hero-kicker">ZORONA · RESTAURANT &amp; CAFE</p>
+      <h1 id="hero-title">نكهات تركيا،<br><em>وروح لبنان</em></h1>
+      <p class="app-hero-lead">اجتمعوا حول المذاق الأصيل، أطباق تُشارك، وضيافة دافئة في أجواء صُممت لتستمتعوا بكل لحظة.</p>
+      <div class="app-hero-actions">
+        <a class="app-primary-cta" href="/menu">استكشف المنيو <span aria-hidden="true">←</span></a>
+        <a class="app-secondary-cta" href="/reservation"><span class="cta-ring" aria-hidden="true">↗</span> احجز طاولتك</a>
+      </div>
+      <div class="app-hero-meta" aria-label="مميزات المطعم">
+        <span class="app-meta-pill"><span aria-hidden="true">✦</span> مطبخ تركي ولبناني</span>
+        <span class="app-meta-pill"><span aria-hidden="true">✦</span> مطعم وكافيه</span>
+        <span class="app-meta-pill"><span aria-hidden="true">✦</span> أطباق للمشاركة</span>
+      </div>
+      <div class="hero-signature"><span class="signature-line"></span><span>Gather around good taste.</span></div>
+    </div>
+    <span class="hero-index" aria-hidden="true">01 <i></i> 03</span>
+  </section>
+
+  <section id="home-actions" class="app-content" aria-label="اختصارات ZORONA">
+    <div class="quick-actions-intro">
+      <p class="app-eyebrow">MAKE IT YOUR MOMENT</p>
+      <p>كل ما تحتاجه لزيارتك القادمة</p>
+    </div>
+    <div class="app-quick-actions">
+      <a class="app-quick-action" href="/menu" style="--quick-bg:url('/media/zorona-mezze.webp')">
+        <span class="app-quick-icon" aria-hidden="true">≡</span>
+        <span class="app-quick-copy"><strong>المنيو</strong><small>اكتشف أطباقنا ونكهاتنا</small></span>
+        <span class="app-quick-arrow" aria-hidden="true">↖</span>
+      </a>
+      <a class="app-quick-action" href="/offers" style="--quick-bg:url('/media/zorona-grill.webp')">
+        <span class="app-quick-icon" aria-hidden="true">%</span>
+        <span class="app-quick-copy"><strong>عروض اليوم</strong><small>اختيارات مميزة تستحق التجربة</small></span>
+        <span class="app-quick-arrow" aria-hidden="true">↖</span>
+      </a>
+      <a class="app-quick-action" href="/reservation" style="--quick-bg:url('/media/zorona-dining.webp')">
+        <span class="app-quick-icon" aria-hidden="true">◷</span>
+        <span class="app-quick-copy"><strong>حجز طاولة</strong><small>رتّب زيارتك بكل سهولة</small></span>
+        <span class="app-quick-arrow" aria-hidden="true">↖</span>
+      </a>
+    </div>
+  </section>
+
+  <div class="app-content home-main-content">
+    <section class="zorona-story app-section" id="experience" aria-labelledby="story-title">
+      <div class="zorona-story-image">
+        <img src="/media/zorona-exterior.webp" alt="الواجهة الخشبية والحجرية لمطعم ZORONA" loading="lazy" decoding="async">
+        <div class="story-image-label"><span>THE ZORONA EXPERIENCE</span><strong>أهلًا بكم على طاولتنا</strong></div>
+      </div>
+      <div class="zorona-story-copy">
+        <p class="app-eyebrow">A TABLE FULL OF STORIES</p>
+        <h2 id="story-title">مش مجرد وجبة،<br><em>دي لَمّة ZORONA</em></h2>
+        <p class="story-lead">من أول طبق على الطاولة لآخر لحظة في الزيارة، نجمع دفء الضيافة مع النكهات التركية واللبنانية في مكان تحب ترجع له.</p>
+        <div class="zorona-story-points">
+          <div><span class="point-symbol">01</span><span><strong>نكهات تجمعنا</strong><small>أطباق تتشاركها مع الناس اللي بتحبهم</small></span></div>
+          <div><span class="point-symbol">02</span><span><strong>أجواء دافئة</strong><small>تفاصيل خشبية ولمسات هادئة</small></span></div>
+        </div>
+        <a class="text-link" href="/menu">تعرّف على المنيو <span aria-hidden="true">←</span></a>
+      </div>
+    </section>
+
+    <section class="app-section zorona-gallery" id="gallery" aria-labelledby="gallery-title">
+      <div class="app-section-head">
+        <div>
+          <p class="app-eyebrow">A LITTLE TASTE OF ZORONA</p>
+          <h2 id="gallery-title">تفاصيل تُحكى بالصورة</h2>
+          <p class="app-section-note">من أطباق المشاركة إلى أجواء المطعم، كل تفصيلة لها طابعها.</p>
+        </div>
+        <a class="app-section-link" href="/menu">اكتشف المنيو <span aria-hidden="true">←</span></a>
+      </div>
+      <div class="zorona-gallery-grid">
+        <figure class="gallery-card gallery-card-featured">
+          <img src="/media/zorona-mezze.webp" alt="تشكيلة مقبلات وأطباق للمشاركة" loading="lazy" decoding="async">
+          <figcaption><span>01 / ON THE TABLE</span><strong>كل طبق بداية حكاية</strong></figcaption>
+        </figure>
+        <figure class="gallery-card">
+          <img src="/media/zorona-grill.webp" alt="مشويات مشكلة مقدمة على طبق طويل" loading="lazy" decoding="async">
+          <figcaption><span>02 / FROM THE GRILL</span><strong>نكهات غنية</strong></figcaption>
+        </figure>
+        <figure class="gallery-card">
+          <img src="/media/zorona-evening.webp" alt="أجواء مطعم ZORONA في المساء" loading="lazy" decoding="async">
+          <figcaption><span>03 / THE ATMOSPHERE</span><strong>أجواء لها طابعها</strong></figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section id="today-offer-section" class="app-section" aria-labelledby="today-offer-title" hidden>
+      <div id="today-offer" class="today-offer">
+        <div class="today-offer-copy">
+          <span class="today-offer-badge">عرض اليوم</span>
+          <h2 id="today-offer-title" class="today-offer-title">اختيار اليوم من ZORONA</h2>
+          <p class="today-offer-note"></p><span class="today-offer-timer" hidden aria-live="polite"></span>
+          <a class="today-offer-action" href="/offers">اكتشف العرض <span aria-hidden="true">←</span></a>
+        </div>
+        <div class="today-offer-media">
+          <img src="/media/zorona-mezze.webp" alt="طبق من مطعم ZORONA" loading="lazy" decoding="async">
+        </div>
+      </div>
+    </section>
+
+    <section class="app-section">
+      <div class="booking-cta">
+        <div>
+          <p class="app-eyebrow">YOUR TABLE AWAITS</p>
+          <h3>اللمة الحلوة تبدأ بحجزك</h3>
+          <p>اختار الموعد المناسب، وسيب لنا باقي تفاصيل الضيافة.</p>
+        </div>
+        <div class="booking-cta-action"><a href="/reservation">احجز طاولتك الآن <span aria-hidden="true">←</span></a></div>
+        <span class="booking-watermark" aria-hidden="true">Z.</span>
+      </div>
+    </section>
+
+    <section id="about" class="about-panel">
+      <p class="app-eyebrow">ZORONA · AJMAN</p>
+      <h2>مكان يجمع النكهة والناس</h2>
+      <p>مطعم وكافيه بطابع تركي ولبناني، حيث الأطباق للمشاركة واللحظات الجميلة على الطاولة.</p>
+    </section>
+  </div>
+</main>
+
+<footer id="contact" class="zorona-footer">
+  <div class="footer-brand"><strong>ZORONA</strong><span>TURKISH &amp; LEBANESE RESTAURANT</span></div>
+  <p>نكهات تجمعنا، وذكريات ترجعنا.</p>
+  <nav aria-label="روابط التذييل"><a href="/menu">المنيو</a><a href="/offers">عروض اليوم</a><a href="/reservation">حجز طاولة</a></nav>
+  <small>© 2026 ZORONA. All rights reserved.</small>
+</footer>
+
+<script type="module" src="./app-header.js"></script>
+<script type="module" src="./home.js"></script>
+</body>
+</html>
