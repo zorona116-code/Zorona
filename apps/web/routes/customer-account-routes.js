@@ -244,9 +244,6 @@ export function registerCustomerAccountRoutes(app, {
 
   app.get('/api/account/me', async (req, res) => {
     res.setHeader('Cache-Control', 'no-store');
-    if (!configured()) {
-      return res.status(503).json({ code: 'OTP_NOT_CONFIGURED', message: 'تسجيل دخول العملاء غير مفعّل على الخادم بعد.' });
-    }
     const token = readSessionToken(req);
     if (!token) return res.status(401).json({ code: 'NOT_SIGNED_IN', message: 'سجّل الدخول لعرض حسابك.' });
     try {
