@@ -9,7 +9,6 @@
       lead: 'اختر التاريخ والوقت وعدد الأشخاص وسنتواصل معك لتأكيد الحجز.',
       name: 'الاسم', phone: 'رقم الهاتف', date: 'التاريخ', time: 'الوقت', guests: 'عدد الأشخاص', notes: 'ملاحظات',
       notesPlaceholder: 'مثلاً: طاولة داخلية، مناسبة خاصة…',
-      smsConsent: 'أوافق على تلقي رسائل SMS تسويقية من ZORONA. هذه الموافقة اختيارية ويمكنني إلغاء الاشتراك في أي وقت.',
       whatsappConsent: 'أوافق على تلقي عروض وإشعارات تسويقية من ZORONA عبر WhatsApp. هذه الموافقة اختيارية ويمكنني إلغاء الاشتراك في أي وقت.',
       submit: 'إرسال طلب الحجز',
       success: 'تم استلام طلب الحجز بنجاح. سنتواصل معك لتأكيد الموعد.',
@@ -22,7 +21,6 @@
       lead: 'Choose the date, time and number of guests. We will contact you to confirm your reservation.',
       name: 'Name', phone: 'Phone number', date: 'Date', time: 'Time', guests: 'Guests', notes: 'Notes',
       notesPlaceholder: 'e.g. indoor table, special occasion…',
-      smsConsent: 'I agree to receive marketing SMS messages from ZORONA. This is optional and I can unsubscribe at any time.',
       whatsappConsent: 'I agree to receive marketing offers and updates from ZORONA through WhatsApp. This is optional and I can unsubscribe at any time.',
       submit: 'Send reservation request',
       success: 'Your reservation request was received. We will contact you to confirm.',
@@ -75,7 +73,6 @@
         time: $('#reservation-time').value,
         guests: Number($('#reservation-guests').value || 0),
         notes: $('#reservation-notes').value,
-        marketingSmsConsent: $('#marketing-sms-consent').checked,
         marketingWhatsappConsent: $('#marketing-whatsapp-consent').checked,
         marketingConsentLanguage: language
       };
