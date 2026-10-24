@@ -1,4 +1,5 @@
 import { request } from './api-client.js';
+import jsQR from 'jsqr';
 
 const $ = selector => document.querySelector(selector);
 const video = $('#coupon-camera');
@@ -18,6 +19,8 @@ let scanning = false;
 let detector = null;
 let scanFrameId = 0;
 let lastScanValue = '';
+const scanCanvas = document.createElement('canvas');
+const scanContext = scanCanvas.getContext('2d', { willReadFrequently: true });
 
 function formatDate(value) {
   if (!value) return '—';
@@ -113,18 +116,34 @@ async function scanLoop() {
     if (scanning) scanFrameId = requestAnimationFrame(scanLoop);
     return;
   }
-  try {
-    const hits = await detector.detect(video);
-    const raw = String(hits?.[0]?.rawValue || '').trim();
-    if (raw && raw !== lastScanValue) {
-      lastScanValue = raw;
-      stopCamera();
-      codeInput.value = raw;
-      await lookupCoupon(raw);
-      return;
+  let raw = '';
+  if (detector) {
+    try {
+      const hits = await detector.detect(video);
+      raw = String(hits?.[0]?.rawValue || '').trim();
+    } catch {
+      // The pixel-based decoder below also handles browsers without BarcodeDetector.
     }
-  } catch {
-    // Continue scanning; a single blurred frame is normal while the camera moves.
+  }
+  if (!raw && scanContext && video.videoWidth && video.videoHeight) {
+    try {
+      const scale = Math.min(1, 720 / video.videoWidth);
+      scanCanvas.width = Math.max(1, Math.round(video.videoWidth * scale));
+      scanCanvas.height = Math.max(1, Math.round(video.videoHeight * scale));
+      scanContext.drawImage(video, 0, 0, scanCanvas.width, scanCanvas.height);
+      const pixels = scanContext.getImageData(0, 0, scanCanvas.width, scanCanvas.height);
+      const decoded = jsQR(pixels.data, pixels.width, pixels.height, { inversionAttempts: 'dontInvert' });
+      raw = String(decoded?.data || '').trim();
+    } catch {
+      // Wait for the next frame if a camera frame cannot be decoded yet.
+    }
+  }
+  if (raw && raw !== lastScanValue) {
+    lastScanValue = raw;
+    stopCamera();
+    codeInput.value = raw;
+    await lookupCoupon(raw);
+    return;
   }
   if (scanning) scanFrameId = requestAnimationFrame(scanLoop);
 }
@@ -134,12 +153,11 @@ async function startCamera() {
     setCameraStatus('الكاميرا تحتاج إلى فتح لوحة التحكم عبر HTTPS. استخدم الإدخال اليدوي مؤقتًا.', 'error');
     return;
   }
-  if (!('BarcodeDetector' in window)) {
-    setCameraStatus('المتصفح لا يدعم قراءة QR بالكاميرا. استخدم حقل كود القسيمة يدويًا.', 'error');
-    return;
-  }
   try {
-    if (!detector) detector = new BarcodeDetector({ formats: ['qr_code'] });
+    if (!detector && 'BarcodeDetector' in window) {
+      try { detector = new BarcodeDetector({ formats: ['qr_code'] }); }
+      catch { detector = null; }
+    }
     cameraStart.disabled = true;
     setCameraStatus('يرجى السماح للمتصفح باستخدام الكاميرا…');
     cameraStream = await navigator.mediaDevices.getUserMedia({
