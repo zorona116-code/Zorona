@@ -507,3 +507,80 @@ export async function setCustomerFavorite(customerId, productId, enabled) {
     );
   }
 }
+
+
+export async function setCustomerMarketingConsent(customerId, channel, enabled, language = 'ar') {
+  if (!dbReady) throw accountNotConfiguredError();
+  const map = {
+    sms: { flag: 'sms_marketing_consent', consentAt: 'sms_consent_at', unsubscribedAt: 'sms_unsubscribed_at' },
+    whatsapp: { flag: 'whatsapp_marketing_consent', consentAt: 'whatsapp_consent_at', unsubscribedAt: 'whatsapp_unsubscribed_at' }
+  };
+  const spec = map[channel];
+  if (!spec) {
+    const error = new Error('Unsupported consent channel.');
+    error.status = 400;
+    throw error;
+  }
+  await ensureSchema();
+  const client = await getPool().connect();
+  try {
+    await client.query('BEGIN');
+    const currentResult = await client.query(
+      'SELECT * FROM customers WHERE id = $1 FOR UPDATE',
+      [customerId]
+    );
+    if (!currentResult.rowCount) {
+      await client.query('COMMIT');
+      return null;
+    }
+    const current = currentResult.rows[0];
+    if (current[spec.flag] !== Boolean(enabled)) {
+      const updateSql = enabled
+        ? 'UPDATE customers SET ' + spec.flag + ' = TRUE, ' + spec.consentAt + ' = now(), ' +
+          spec.unsubscribedAt + ' = NULL, updated_at = now() WHERE id = $1 RETURNING *'
+        : 'UPDATE customers SET ' + spec.flag + ' = FALSE, ' + spec.unsubscribedAt + ' = now(), updated_at = now() WHERE id = $1 RETURNING *';
+      const updated = await client.query(updateSql, [customerId]);
+      await client.query(
+        'INSERT INTO customer_consent_events (customer_id, channel, action, consent_text, consent_language, source) ' +
+        'VALUES ($1, $2, $3, $4, $5, $6)',
+        [
+          customerId,
+          channel,
+          enabled ? 'opt_in' : 'opt_out',
+          enabled
+            ? CUSTOMER_CONSENT_COPY[language === 'en' ? 'en' : 'ar'][channel]
+            : 'Customer changed marketing preferences in their ZORONA account settings.',
+          language === 'en' ? 'en' : 'ar',
+          'customer_account'
+        ]
+      );
+      await client.query('COMMIT');
+      const customer = updated.rows[0];
+      return {
+        id: Number(customer.id),
+        name: customer.name,
+        phone: customer.phone,
+        sms_marketing_consent: customer.sms_marketing_consent === true,
+        whatsapp_marketing_consent: customer.whatsapp_marketing_consent === true,
+        first_seen_at: customer.first_seen_at,
+        last_seen_at: customer.last_seen_at
+      };
+    }
+    await client.query('COMMIT');
+    return {
+      id: Number(current.id),
+      name: current.name,
+      phone: current.phone,
+      sms_marketing_consent: current.sms_marketing_consent === true,
+      whatsapp_marketing_consent: current.whatsapp_marketing_consent === true,
+      first_seen_at: current.first_seen_at,
+      last_seen_at: current.last_seen_at
+    };
+  } catch (error) {
+    try { await client.query('ROLLBACK'); } catch {}
+    logServiceFailure(error, { service: 'customer-account', operation: 'marketing-preference' });
+    throw error;
+  } finally {
+    client.release();
+  }
+}
