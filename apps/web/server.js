@@ -50,7 +50,7 @@ const accountOtpPhoneRateLimit=createRateLimiter({
   windowMs:15*60*1000,
   limit:3,
   message:'Too many verification codes requested for this phone. Please wait.',
-  keyResolver:(req)=>'phone:'+String(req.body?.phone||'').replace(/\\D/g,'').slice(-15)
+  keyResolver:(req)=>'phone:'+String(req.body?.phone||'').replace(/\D/g,'').slice(-15)
 });
 const accountOtpVerifyRateLimit=createRateLimiter({
   windowMs:15*60*1000,
