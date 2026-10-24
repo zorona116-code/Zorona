@@ -44,7 +44,7 @@
 
   <section id="account-dashboard" class="account-dashboard" hidden>
     <div class="account-welcome">
-      <div><p class="account-kicker" data-i18n="welcomeBack">أهلًا بعودتك</p><h2><span data-i18n="hello">أهلًا</span> <strong id="customer-name-heading">—</strong></h2><p id="customer-phone-heading" class="account-muted" dir="ltr"></p></div>
+      <div><p class="account-kicker" data-i18n="welcomeBack">أهلًا بعودتك</p><h2 data-i18n="welcomeHeading">أهلًا بعودتك إلى ZORONA</h2></div>
       <button id="account-logout" class="account-logout" type="button" data-i18n="logout">تسجيل الخروج</button>
     </div>
     <div class="account-stat-grid">
@@ -97,21 +97,6 @@
       <p id="catalog-empty" class="account-empty" hidden data-i18n="catalogEmpty">لا توجد أصناف متاحة للعرض حاليًا.</p>
     </section>
 
-    <section class="account-section account-profile-section">
-      <div class="account-section-heading"><div><p class="account-kicker" data-i18n="yourDetails">تفاصيلك</p><h2 data-i18n="profileTitle">بيانات الحساب</h2></div></div>
-      <form id="account-profile-form" class="account-profile-form">
-        <label for="account-profile-name" data-i18n="nameLabel">الاسم</label>
-        <input id="account-profile-name" name="name" maxlength="80" autocomplete="name" required>
-        <button class="account-primary account-save-profile" type="submit" data-i18n="saveProfile">حفظ الاسم</button>
-        <p id="account-profile-message" class="account-message" role="status" aria-live="polite"></p>
-      </form>
-      <form id="account-consent-form" class="account-profile-form account-consent-form">
-        <label class="account-consent-toggle"><input id="account-whatsapp-consent" type="checkbox"><span data-i18n="whatsappPreference">أوافق على تلقي عروض تسويقية من ZORONA عبر WhatsApp. الموافقة اختيارية ويمكن إلغاؤها في أي وقت.</span></label>
-        <p class="account-consent-help" data-i18n="consentHelp">التسويق عبر واتساب فقط، ويمكنك إلغاء الموافقة في أي وقت. لن نرسل عروضًا تسويقية عبر SMS.</p>
-        <button class="account-primary account-save-profile" type="submit" data-i18n="savePreferences">حفظ تفضيلات الرسائل</button>
-        <p id="account-consent-message" class="account-message" role="status" aria-live="polite"></p>
-      </form>
-    </section>
   </section>
 </main>
 <footer id="contact"><strong>ZORONA</strong><span>Restaurant & Cafe</span><small>© 2026 ZORONA. All rights reserved.</small></footer>

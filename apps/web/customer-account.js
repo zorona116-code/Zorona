@@ -22,7 +22,7 @@
       phoneLabel: 'رقم الهاتف مع مفتاح الدولة', sendCode: 'إرسال كود التحقق',
       codeLabel: 'كود التحقق', verifyCode: 'تأكيد الدخول', changePhone: 'تغيير رقم الهاتف',
       privacyNote: 'حجوزاتك خاصة بحسابك، ولن تظهر إلا بعد التحقق من رقم هاتفك.',
-      welcomeBack: 'أهلًا بعودتك', hello: 'أهلًا', logout: 'تسجيل الخروج',
+      welcomeBack: 'أهلًا بعودتك', welcomeHeading: 'أهلًا بعودتك إلى ZORONA', logout: 'تسجيل الخروج',
       upcomingBookings: 'حجوزات قادمة', favoriteItems: 'أصناف مفضلة', totalBookings: 'إجمالي الحجوزات',
       yourVisits: 'زياراتك', reservationsTitle: 'حجوزات الطاولات', newBooking: 'حجز جديد ←',
       saveForLater: 'احتفظ بها', favoritesTitle: 'أصنافك المفضلة', viewMenu: 'تصفح المنيو ←',
@@ -53,7 +53,7 @@
       phoneLabel: 'Phone number with country code', sendCode: 'Send verification code',
       codeLabel: 'Verification code', verifyCode: 'Verify and sign in', changePhone: 'Change phone number',
       privacyNote: 'Your reservations are private and appear only after your phone number is verified.',
-      welcomeBack: 'Welcome back', hello: 'Hello', logout: 'Sign out',
+      welcomeBack: 'Welcome back', welcomeHeading: 'Welcome back to ZORONA', logout: 'Sign out',
       upcomingBookings: 'Upcoming bookings', favoriteItems: 'Favourite dishes', totalBookings: 'Total bookings',
       yourVisits: 'Your visits', reservationsTitle: 'Table reservations', newBooking: 'New reservation →',
       saveForLater: 'Saved for later', favoritesTitle: 'Your favourites', viewMenu: 'Browse menu →',
@@ -376,10 +376,6 @@
     const notice = $('#account-app-only-notice');
     if (notice) notice.hidden = true;
     dashboard.hidden = false;
-    $('#customer-name-heading').textContent = data.customer?.name || 'ZORONA';
-    $('#customer-phone-heading').textContent = data.customer?.phone || '';
-    $('#account-profile-name').value = data.customer?.name || '';
-    $('#account-whatsapp-consent').checked = data.customer?.whatsappMarketingConsent === true;
     const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Dubai', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
     const upcoming = (data.reservations || []).filter(item => item.date >= today && item.status !== 'cancelled');
     $('#upcoming-count').textContent = String(upcoming.length);
@@ -413,52 +409,6 @@
     showLogin(t('signedOut'), 'success');
   });
 
-  $('#account-profile-form').addEventListener('submit', async event => {
-    event.preventDefault();
-    const button = $('#account-profile-form button[type="submit"]');
-    button.disabled = true;
-    button.textContent = t('saving');
-    setMessage($('#account-profile-message'), '', '');
-    try {
-      const result = await api('/api/account/profile', {
-        method: 'PATCH',
-        body: { name: $('#account-profile-name').value.trim() }
-      });
-      if (accountData) accountData.customer = result.customer;
-      $('#customer-name-heading').textContent = result.customer.name;
-      setMessage($('#account-profile-message'), t('profileSaved'), 'success');
-    } catch (error) {
-      setMessage($('#account-profile-message'), error.message || t('error'), 'error');
-    } finally {
-      button.disabled = false;
-      button.textContent = t('saveProfile');
-    }
-  });
-
-  $('#account-consent-form').addEventListener('submit', async event => {
-    event.preventDefault();
-    const button = $('#account-consent-form button[type="submit"]');
-    button.disabled = true;
-    const originalLabel = button.textContent;
-    button.textContent = t('saving');
-    setMessage($('#account-consent-message'), '', '');
-    try {
-      const result = await api('/api/account/marketing-preferences', {
-        method: 'PATCH',
-        body: {
-          whatsapp: $('#account-whatsapp-consent').checked,
-          language
-        }
-      });
-      if (accountData) accountData.customer = result.customer;
-      setMessage($('#account-consent-message'), language === 'ar' ? 'تم حفظ تفضيلات الرسائل.' : 'Messaging preferences saved.', 'success');
-    } catch (error) {
-      setMessage($('#account-consent-message'), error.message || t('error'), 'error');
-    } finally {
-      button.disabled = false;
-      button.textContent = originalLabel || t('savePreferences');
-    }
-  });
 
   async function toggleFavorite(button) {
     const productId = button.dataset.favoriteId;
@@ -472,7 +422,7 @@
       const data = await api('/api/account/me');
       renderAccount(data);
     } catch (error) {
-      setMessage($('#account-profile-message'), error.message || t('error'), 'error');
+      setMessage($('#account-campaign-coupons-message'), error.message || t('error'), 'error');
     } finally {
       button.disabled = false;
     }
