@@ -86,7 +86,7 @@
       const existingKey = subscription.options?.applicationServerKey;
       if (existingKey && (
         existingKey.byteLength !== applicationServerKey.byteLength ||
-        !existingKey.every((byte, index) => byte === applicationServerKey[index])
+        Array.from(new Uint8Array(existingKey)).some((byte, index) => byte !== applicationServerKey[index])
       )) {
         await subscription.unsubscribe();
         subscription = null;
