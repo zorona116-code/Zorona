@@ -53,6 +53,25 @@
       <article class="account-stat"><span class="account-stat-icon">✦</span><strong id="total-booking-count">0</strong><span data-i18n="totalBookings">إجمالي الحجوزات</span></article>
     </div>
 
+    <section class="account-section account-coupon-section" id="account-coupon-section">
+      <div class="account-section-heading"><div><p class="account-kicker" data-i18n="couponKicker">امتياز خاص بحسابك</p><h2 data-i18n="couponTitle">قسيمة خصمك</h2></div></div>
+      <div id="account-coupon-card" class="account-coupon-card">
+        <p class="account-coupon-lead" data-i18n="couponDescription">قسيمتك محفوظة في حسابك، وهتفضل موجودة حتى لو خرجت ورجعت تسجّل دخول.</p>
+        <div class="account-coupon-body">
+          <div id="account-coupon-qr-wrap" class="account-coupon-qr-wrap" hidden><img id="account-coupon-qr" alt="QR coupon" loading="lazy"></div>
+          <div class="account-coupon-details">
+            <span id="account-coupon-status" class="account-coupon-status" data-i18n="couponLoading">جارٍ تحميل قسيمتك…</span>
+            <strong id="account-coupon-discount">خصم 20%</strong>
+            <p class="account-coupon-code-label" data-i18n="couponCode">كود القسيمة</p>
+            <code id="account-coupon-code">—</code>
+            <small id="account-coupon-issued"></small>
+          </div>
+        </div>
+        <p id="account-coupon-message" class="account-coupon-message" role="status" aria-live="polite"></p>
+        <button id="account-coupon-retry" class="account-coupon-retry" type="button" data-i18n="couponRetry" hidden>إعادة تحميل القسيمة</button>
+      </div>
+    </section>
+
     <section class="account-section">
       <div class="account-section-heading"><div><p class="account-kicker" data-i18n="yourVisits">زياراتك</p><h2 data-i18n="reservationsTitle">حجوزات الطاولات</h2></div><a href="/reservation" class="account-text-link" data-i18n="newBooking">حجز جديد ←</a></div>
       <div id="account-reservations" class="account-reservation-list"></div>
