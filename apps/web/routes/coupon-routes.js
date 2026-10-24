@@ -34,6 +34,7 @@ function presentCampaign(campaign) {
   return {
     id: campaign.id,
     campaignId: campaign.id,
+    customerId: campaign.customerId,
     couponKind: 'campaign',
     code: campaign.code,
     title: campaign.title,
