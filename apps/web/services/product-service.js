@@ -4,11 +4,17 @@ import { logServiceFailure } from '../utils/service-error.js';
 export function createProductService({
   repository, categories, storageReady, presign, deleteObject, isAdminApiKeyValid,
   cleanText, cleanKey, cleanUrl, normalizeList, smartSnapshot, withMediaUrls,
-  invalidateSmartSnapshot, nextProductId, maxVideoBytes, videoTypes
+  invalidateSmartSnapshot, onProductPublished = () => {}, nextProductId, maxVideoBytes, videoTypes
 }) {
   const products = repository;
   const smartTags = new Set(['spicy']);
   const dietaryTags = new Set(['vegetarian', 'vegan', 'gluten-free']);
+  const notifyPublished = (product) => {
+    if (!product || product.available === false) return;
+    Promise.resolve().then(() => onProductPublished(structuredClone(product))).catch(error => {
+      logServiceFailure(error, { service: 'product', operation: 'notify-published' });
+    });
+  };
   const presentProduct=(product,snapshot,{includePrivate=false}={})=>{
     const value=withMediaUrls(product,snapshot);
     if(includePrivate)return value;
@@ -69,6 +75,7 @@ export function createProductService({
       }
 
       invalidateSmartSnapshot();
+      notifyPublished(product);
       return res.status(201).json(withMediaUrls(product));
     },
 
@@ -135,6 +142,7 @@ export function createProductService({
       }
 
       invalidateSmartSnapshot();
+      if (before.available === false && product.available !== false) notifyPublished(product);
       return res.json(withMediaUrls(product));
     },
 
