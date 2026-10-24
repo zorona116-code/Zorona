@@ -69,6 +69,8 @@ function renderCoupon(coupon, message = '') {
     $('#coupon-result-minimum').textContent = '—';
     $('#coupon-result-uses').textContent = '—';
     $('#coupon-result-expiry').textContent = '—';
+    if ($('#coupon-customer-phone-verify-label')) $('#coupon-customer-phone-verify-label').hidden = true;
+    if ($('#coupon-customer-phone-verify')) $('#coupon-customer-phone-verify').value = '';
     $('#coupon-result-message').textContent = message || 'لم يتم العثور على القسيمة.';
     redeemButton.hidden = true;
     return;
@@ -389,7 +391,10 @@ codeForm?.addEventListener('submit', event => {
 
 redeemButton?.addEventListener('click', async () => {
   if (!currentCoupon?.code || (currentCoupon.couponKind === 'campaign' ? currentCoupon.redeemable !== true : Boolean(currentCoupon.redeemedAt))) return;
-  if (!window.confirm('تأكيد صرف خصم ' + Number(currentCoupon.discountPercent) + '%؟ لا يمكن استخدام هذه القسيمة مرة أخرى.')) return;
+  const confirmation = currentCoupon.couponKind === 'campaign'
+    ? 'تأكيد تسجيل استخدام قسيمة «' + (currentCoupon.title || 'عرض') + '» بخصم ' + Number(currentCoupon.discountPercent) + '%؟'
+    : 'تأكيد صرف خصم ' + Number(currentCoupon.discountPercent) + '%؟ لا يمكن استخدام هذه القسيمة مرة أخرى.';
+  if (!window.confirm(confirmation)) return;
   redeemButton.disabled = true;
   redeemButton.textContent = 'جارٍ تسجيل الصرف…';
   try {
