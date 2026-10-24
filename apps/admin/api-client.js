@@ -18,6 +18,7 @@ const redirectToLogin=()=>{
 };
 
 export async function request(path,options={}){
+  const upstreamRetryCount=Number.isInteger(options._upstreamRetryCount)?options._upstreamRetryCount:0;
   const controller=new AbortController();
   const timeoutMs=Number(options.timeoutMs||15000);
   const timeout=window.setTimeout(()=>controller.abort(new DOMException('Request timeout','TimeoutError')),timeoutMs);
@@ -33,6 +34,7 @@ export async function request(path,options={}){
   const headers={'Content-Type':'application/json',Accept:'application/json','X-Request-Id':crypto.randomUUID(),...(options.headers||{})};
   const fetchOptions={...options,headers,cache:'no-store',signal:controller.signal};
   delete fetchOptions.timeoutMs;
+  delete fetchOptions._upstreamRetryCount;
 
   try{
     const response=await fetch(`${apiBase()}${path}`,fetchOptions);
@@ -41,6 +43,12 @@ export async function request(path,options={}){
     let data={};
     if(text){try{data=JSON.parse(text)}catch{data={message:text.slice(0,300)}}}
     if(!response.ok){
+      const requestMethod=String(options.method||'GET').toUpperCase();
+      const retryDelays=[1500,3000,6000,10000,15000,20000,15000];
+      if(response.status===502&&requestMethod==='GET'&&upstreamRetryCount<retryDelays.length&&!callerSignal?.aborted){
+        await new Promise(resolve=>window.setTimeout(resolve,retryDelays[upstreamRetryCount]));
+        return await request(path,{...options,_upstreamRetryCount:upstreamRetryCount+1});
+      }
       if(response.status===401)redirectToLogin();
       const message=response.status===401?'انتهت جلسة لوحة التحكم. جارٍ إعادتك لتسجيل الدخول.':
         response.status===403?(data.message||'ليس لديك صلاحية تنفيذ هذا الإجراء.'):
