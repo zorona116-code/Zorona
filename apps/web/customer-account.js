@@ -9,6 +9,8 @@
   let accountData = null;
   let couponPayload = null;
   let couponRequest = null;
+  let campaignCoupons = [];
+  let campaignCouponsRequest = null;
   let language = localStorage.getItem('ARABISK_LANG') === 'en' ? 'en' : 'ar';
 
   const strings = {
@@ -40,7 +42,7 @@
       enterCode: 'أدخل الكود الذي وصلك على الهاتف.',
       signInRequired: 'سجّل الدخول لعرض الحجوزات والمفضلة الخاصة بك.',
       otpSent: 'إذا كان الرقم قادرًا على استقبال الرسائل، فسيصلك كود التحقق.',
-      couponKicker: 'امتياز خاص بحسابك', couponTitle: 'قسيمة خصمك', couponDescription: 'قسيمتك محفوظة في حسابك، وهتفضل موجودة حتى لو خرجت ورجعت تسجّل دخول.', couponLoading: 'جارٍ تحميل قسيمتك…', couponRetry: 'إعادة تحميل القسيمة', couponCode: 'كود القسيمة', couponAvailable: 'صالحة للاستخدام', couponUsed: 'تم استخدام القسيمة', couponUseNote: 'اعرض رمز QR للموظف عند طلبك. القسيمة صالحة مرة واحدة فقط.', couponUsedNote: 'تم صرف هذه القسيمة بالفعل، ولا يمكن استخدامها مرة أخرى.', couponLoadError: 'تعذر تحميل القسيمة. حاول مرة أخرى.', couponIssued: 'تاريخ الإصدار', couponQrAlt: 'رمز QR لقسيمة الخصم',
+      couponKicker: 'امتياز خاص بحسابك', couponTitle: 'قسيمة خصمك', couponDescription: 'قسيمتك محفوظة في حسابك، وهتفضل موجودة حتى لو خرجت ورجعت تسجّل دخول.', couponLoading: 'جارٍ تحميل قسيمتك…', couponRetry: 'إعادة تحميل القسيمة', couponCode: 'كود القسيمة', couponAvailable: 'صالحة للاستخدام', couponUsed: 'تم استخدام القسيمة', couponUseNote: 'اعرض رمز QR للموظف عند طلبك. القسيمة صالحة مرة واحدة فقط.', couponUsedNote: 'تم صرف هذه القسيمة بالفعل، ولا يمكن استخدامها مرة أخرى.', couponLoadError: 'تعذر تحميل القسيمة. حاول مرة أخرى.', couponIssued: 'تاريخ الإصدار', couponQrAlt: 'رمز QR لقسيمة الخصم', campaignCouponsKicker: 'عروض مخصصة ليك', campaignCouponsTitle: 'قسائم وعروض إضافية', campaignCouponsIntro: 'احتفظ بالقسائم المتاحة لحسابك واعرض رمز QR للموظف عند الاستخدام. كل قسيمة تخضع لشروطها الموضحة.', campaignCouponsLoading: 'جارٍ تحميل عروضك…', campaignCouponsEmpty: 'لا توجد قسائم إضافية متاحة لحسابك حاليًا.', campaignCouponsError: 'تعذر تحميل القسائم الإضافية.', campaignCouponsRetry: 'إعادة تحميل القسائم', campaignMinOrder: 'الحد الأدنى للطلب', campaignExpires: 'صالحة حتى', campaignUses: 'عدد الاستخدامات', campaignUnlimited: 'بلا حد', campaignCode: 'كود القسيمة', campaignPublic: 'عرض متاح للعملاء', campaignPersonal: 'قسيمة مخصصة لحسابك',
       saving: 'جارٍ الحفظ…', pricePrefix: 'د.إ'
     },
     en: {
@@ -71,7 +73,7 @@
       enterCode: 'Enter the code sent to your phone.',
       signInRequired: 'Sign in to see your private reservations and favourites.',
       otpSent: 'If this number can receive messages, a verification code will arrive shortly.',
-      couponKicker: 'A benefit for your account', couponTitle: 'Your discount coupon', couponDescription: 'Your coupon is saved to your account and will still be here when you sign in again.', couponLoading: 'Loading your coupon…', couponRetry: 'Reload coupon', couponCode: 'Coupon code', couponAvailable: 'Ready to use', couponUsed: 'Coupon redeemed', couponUseNote: 'Show this QR code to staff when ordering. This coupon can be used once only.', couponUsedNote: 'This coupon has already been redeemed and cannot be used again.', couponLoadError: 'Could not load your coupon. Please try again.', couponIssued: 'Issued', couponQrAlt: 'Discount coupon QR code',
+      couponKicker: 'A benefit for your account', couponTitle: 'Your discount coupon', couponDescription: 'Your coupon is saved to your account and will still be here when you sign in again.', couponLoading: 'Loading your coupon…', couponRetry: 'Reload coupon', couponCode: 'Coupon code', couponAvailable: 'Ready to use', couponUsed: 'Coupon redeemed', couponUseNote: 'Show this QR code to staff when ordering. This coupon can be used once only.', couponUsedNote: 'This coupon has already been redeemed and cannot be used again.', couponLoadError: 'Could not load your coupon. Please try again.', couponIssued: 'Issued', couponQrAlt: 'Discount coupon QR code', campaignCouponsKicker: 'Offers selected for you', campaignCouponsTitle: 'More coupons and offers', campaignCouponsIntro: 'Keep eligible offers in your account and show their QR code to staff. Each coupon has its own terms.', campaignCouponsLoading: 'Loading your offers…', campaignCouponsEmpty: 'There are no additional coupons available for your account right now.', campaignCouponsError: 'Could not load your additional coupons.', campaignCouponsRetry: 'Reload coupons', campaignMinOrder: 'Minimum order', campaignExpires: 'Valid until', campaignUses: 'Uses', campaignUnlimited: 'Unlimited', campaignCode: 'Coupon code', campaignPublic: 'Offer for customers', campaignPersonal: 'Assigned to your account',
       saving: 'Saving…', pricePrefix: 'AED'
     }
   };
@@ -286,6 +288,87 @@
     })();
     return couponRequest;
   }
+
+  function renderCampaignCoupons() {
+    const target = $('#account-campaign-coupons-list');
+    if (!target) return;
+    target.replaceChildren();
+    if (!campaignCoupons.length) {
+      const empty = document.createElement('p');
+      empty.className = 'account-empty';
+      empty.textContent = t('campaignCouponsEmpty');
+      target.append(empty);
+      return;
+    }
+    for (const coupon of campaignCoupons) {
+      const card = document.createElement('article');
+      card.className = 'account-campaign-coupon-card';
+      const qr = document.createElement('div');
+      qr.className = 'account-campaign-coupon-qr';
+      const img = document.createElement('img');
+      img.src = coupon.qrDataUrl;
+      img.alt = t('couponQrAlt');
+      img.loading = 'lazy';
+      qr.append(img);
+
+      const details = document.createElement('div');
+      details.className = 'account-campaign-coupon-details';
+      const title = document.createElement('h3');
+      title.textContent = coupon.title || t('campaignPublic');
+      const badge = document.createElement('span');
+      badge.className = 'account-campaign-coupon-badge';
+      badge.textContent = coupon.customerId ? t('campaignPersonal') : t('campaignPublic');
+      const discount = document.createElement('strong');
+      discount.className = 'account-campaign-coupon-discount';
+      discount.textContent = (language === 'ar' ? 'خصم ' : '') + Number(coupon.discountPercent || 0) + '%' + (language === 'en' ? ' off' : '');
+      const codeLabel = document.createElement('small');
+      codeLabel.textContent = t('campaignCode');
+      const code = document.createElement('code');
+      code.textContent = coupon.code || '—';
+      const terms = document.createElement('div');
+      terms.className = 'account-campaign-coupon-terms';
+      const minimum = document.createElement('span');
+      minimum.textContent = t('campaignMinOrder') + ': ' + Number(coupon.minimumOrderAmount || 0).toFixed(2) + ' ' + (language === 'ar' ? 'د.إ' : 'AED');
+      terms.append(minimum);
+      if (coupon.expiresAt) {
+        const expiry = document.createElement('span');
+        const date = new Date(coupon.expiresAt);
+        expiry.textContent = t('campaignExpires') + ': ' + (Number.isNaN(date.getTime()) ? '—' : date.toLocaleDateString(language === 'ar' ? 'ar-AE' : 'en-AE', { year: 'numeric', month: 'short', day: 'numeric', timeZone: 'Asia/Dubai' }));
+        terms.append(expiry);
+      }
+      const uses = document.createElement('span');
+      uses.textContent = t('campaignUses') + ': ' + Number(coupon.usageCount || 0) + ' / ' + (coupon.maxUses === null ? t('campaignUnlimited') : String(coupon.maxUses));
+      terms.append(uses);
+      details.append(title, badge, discount, codeLabel, code, terms);
+      card.append(qr, details);
+      target.append(card);
+    }
+  }
+
+  async function loadAccountCampaignCoupons(force = false) {
+    if (campaignCouponsRequest && !force) return campaignCouponsRequest;
+    const target = $('#account-campaign-coupons-list');
+    const retry = $('#account-campaign-coupons-retry');
+    if (target) target.replaceChildren(Object.assign(document.createElement('p'), { className: 'account-empty', textContent: t('campaignCouponsLoading') }));
+    if (retry) retry.hidden = true;
+    campaignCouponsRequest = (async () => {
+      try {
+        const response = await api('/api/account/campaign-coupons');
+        campaignCoupons = Array.isArray(response.coupons) ? response.coupons : [];
+        if ($('#account-campaign-coupons-message')) $('#account-campaign-coupons-message').textContent = '';
+        renderCampaignCoupons();
+      } catch (error) {
+        campaignCoupons = [];
+        if (target) target.replaceChildren();
+        if ($('#account-campaign-coupons-message')) $('#account-campaign-coupons-message').textContent = error.message || t('campaignCouponsError');
+        if (retry) retry.hidden = false;
+      } finally {
+        campaignCouponsRequest = null;
+      }
+    })();
+    return campaignCouponsRequest;
+  }
+
   function renderAccount(data) {
     accountData = data;
     if (loginPanel) loginPanel.hidden = true;
@@ -304,6 +387,7 @@
     renderReservations(data.reservations || []);
     renderProducts();
     void loadAccountCoupon();
+    void loadAccountCampaignCoupons();
   }
 
   async function refreshAccount() {
@@ -322,6 +406,8 @@
     try { await api('/api/account/logout', { method: 'POST', body: {} }); } catch {}
     accountData = null;
     couponPayload = null;
+    campaignCoupons = [];
+    $('#account-campaign-coupons-list')?.replaceChildren();
     $('#account-coupon-qr-wrap').hidden = true;
     $('#account-coupon-code').textContent = '—';
     showLogin(t('signedOut'), 'success');
@@ -394,6 +480,7 @@
   }
 
   $('#account-coupon-retry')?.addEventListener('click', () => void loadAccountCoupon(true));
+  $('#account-campaign-coupons-retry')?.addEventListener('click', () => void loadAccountCampaignCoupons(true));
 
   document.addEventListener('click', event => {
     const button = event.target.closest('[data-favorite-id]');
