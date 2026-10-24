@@ -198,11 +198,18 @@ export function createHeroBannerService({
     }
     const fileName = cleanText(body.fileName, 160).replace(/[^a-zA-Z0-9._-]/g, '-');
     const contentType = cleanText(body.contentType, 100).toLowerCase();
+    const selectedMediaType = body.mediaType === 'video' ? 'video' : body.mediaType === 'image' ? 'image' : '';
     const size = Number(body.size);
-    const allowed = purpose === 'poster' ? IMAGE_TYPES : new Set([...IMAGE_TYPES, ...VIDEO_TYPES]);
+    const allowed = purpose === 'poster'
+      ? IMAGE_TYPES
+      : selectedMediaType === 'video'
+        ? VIDEO_TYPES
+        : selectedMediaType === 'image'
+          ? IMAGE_TYPES
+          : new Set();
     const maxSize = purpose === 'poster' || IMAGE_TYPES.has(contentType) ? MAX_IMAGE_BYTES : MAX_VIDEO_BYTES;
     if (!fileName || !allowed.has(contentType)) {
-      const error = new Error(purpose === 'poster' ? 'صورة الغلاف يجب أن تكون JPG أو PNG أو WebP أو AVIF.' : 'الصيغ المسموحة: JPG وPNG وWebP وMP4 وMOV.');
+      const error = new Error(purpose === 'poster' ? 'صورة الغلاف يجب أن تكون JPG أو PNG أو WebP أو AVIF.' : 'اختر صيغة متوافقة مع نوع البانر: صورة JPG/PNG/WebP/AVIF أو فيديو MP4/WebM/MOV.');
       error.status = 400;
       throw error;
     }
@@ -210,10 +217,6 @@ export function createHeroBannerService({
       const error = new Error(purpose === 'poster' || IMAGE_TYPES.has(contentType) ? 'الحد الأقصى للصورة 15MB.' : 'الحد الأقصى للفيديو 120MB.');
       error.status = 400;
       throw error;
-    }
-    if (purpose === 'media' && ((banner.mediaType === 'video' && IMAGE_TYPES.has(contentType)) || (banner.mediaType === 'image' && VIDEO_TYPES.has(contentType)))) {
-      // The dashboard may upload a replacement before saving the selected media type,
-      // so this endpoint validates the media type by MIME and lets the save operation commit it.
     }
     const key = 'hero-banner/' + crypto.randomUUID() + '-' + fileName;
     return { key, uploadUrl: presign('PUT', key, 900), expiresIn: 900 };
