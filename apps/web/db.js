@@ -354,8 +354,9 @@ export async function recordCustomerReservation(reservation, consent = {}) {
       );
     }
 
+    // ZORONA marketing consent is WhatsApp-only. SMS consent is deliberately
+    // not enabled by reservation submissions, even from older clients.
     const choices = [
-      { channel: 'sms', consented: consent.marketingSmsConsent === true, flag: 'sms_marketing_consent', timestamp: 'sms_consent_at', unsubscribed: 'sms_unsubscribed_at' },
       { channel: 'whatsapp', consented: consent.marketingWhatsappConsent === true, flag: 'whatsapp_marketing_consent', timestamp: 'whatsapp_consent_at', unsubscribed: 'whatsapp_unsubscribed_at' }
     ];
 
