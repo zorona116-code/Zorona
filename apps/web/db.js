@@ -796,7 +796,12 @@ export async function createCouponCampaign(input) {
   const discountPercent = Math.trunc(Number(input.discountPercent));
   const minimumOrderAmount = Number(input.minimumOrderAmount || 0);
   const maxUses = input.maxUses === null || input.maxUses === undefined || input.maxUses === '' ? null : Math.trunc(Number(input.maxUses));
-  const customerId = input.customerId === null || input.customerId === undefined || input.customerId === '' ? null : Math.trunc(Number(input.customerId));
+  let customerId = input.customerId === null || input.customerId === undefined || input.customerId === '' ? null : Math.trunc(Number(input.customerId));
+  if (customerId === null && input.customerPhone) {
+    const target = await getPool().query('SELECT id FROM customers WHERE phone = $1', [String(input.customerPhone).trim()]);
+    if (!target.rowCount) { const error = new Error('لم يتم العثور على عميل بهذا الرقم. يجب أن يكون لديه حساب في ZORONA أولًا.'); error.status = 404; throw error; }
+    customerId = Number(target.rows[0].id);
+  }
   if (title.length < 2 || !Number.isFinite(discountPercent) || discountPercent < 1 || discountPercent > 100 || !Number.isFinite(minimumOrderAmount) || minimumOrderAmount < 0 || (maxUses !== null && (!Number.isInteger(maxUses) || maxUses < 1))) {
     const error = new Error('بيانات القسيمة غير صالحة.'); error.status = 400; throw error;
   }
