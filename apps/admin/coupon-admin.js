@@ -14,6 +14,8 @@ const resultPanel = $('#coupon-result');
 const redeemButton = $('#coupon-redeem-button');
 
 let currentCoupon = null;
+let couponRows = [];
+let couponStats = { total: 0, available: 0, redeemed: 0 };
 let cameraStream = null;
 let scanning = false;
 let detector = null;
@@ -83,6 +85,60 @@ function renderCoupon(coupon, message = '') {
   redeemButton.disabled = redeemed;
 }
 
+
+function renderCouponHistory() {
+  const body = $('#admin-coupons-body');
+  if (!body) return;
+  const filter = $('#admin-coupon-filter')?.value || 'all';
+  const visible = couponRows.filter(coupon => filter === 'all' || (filter === 'redeemed' ? Boolean(coupon.redeemedAt) : !coupon.redeemedAt));
+  body.replaceChildren();
+  if (!visible.length) {
+    const row = document.createElement('tr');
+    const cell = document.createElement('td');
+    cell.colSpan = 6;
+    cell.textContent = filter === 'redeemed' ? 'لا توجد قسائم مستخدمة ضمن السجل المعروض.' : filter === 'unused' ? 'لا توجد قسائم متاحة ضمن السجل المعروض.' : 'لم تصدر أي قسائم حتى الآن.';
+    row.append(cell); body.append(row); return;
+  }
+  for (const coupon of visible) {
+    const row = document.createElement('tr');
+    const name = document.createElement('td'); name.textContent = coupon.customerName || '—';
+    const phone = document.createElement('td'); phone.textContent = coupon.customerPhone || '—'; phone.dir = 'ltr';
+    const discount = document.createElement('td'); discount.textContent = Number(coupon.discountPercent || 0) + '%';
+    const issued = document.createElement('td'); issued.textContent = formatDate(coupon.issuedAt);
+    const state = document.createElement('td');
+    const badge = document.createElement('span');
+    badge.className = 'coupon-history-status ' + (coupon.redeemedAt ? 'is-used' : 'is-available');
+    badge.textContent = coupon.redeemedAt ? 'مستخدمة' : 'متاحة'; state.append(badge);
+    const redeemed = document.createElement('td'); redeemed.textContent = formatDate(coupon.redeemedAt);
+    row.append(name, phone, discount, issued, state, redeemed); body.append(row);
+  }
+}
+
+async function refreshCouponList() {
+  const button = $('#admin-coupons-refresh');
+  const status = $('#admin-coupons-status');
+  if (button) button.disabled = true;
+  if (status) status.textContent = 'جارٍ تحميل سجل القسائم…';
+  try {
+    const result = await request('/api/admin/coupons');
+    couponRows = Array.isArray(result.coupons) ? result.coupons : [];
+    couponStats = result.stats || { total: couponRows.length, available: 0, redeemed: 0 };
+    $('#coupon-stat-total').textContent = String(couponStats.total || 0);
+    $('#coupon-stat-available').textContent = String(couponStats.available || 0);
+    $('#coupon-stat-redeemed').textContent = String(couponStats.redeemed || 0);
+    const total = Number(couponStats.total || 0);
+    const redeemedCount = Number(couponStats.redeemed || 0);
+    $('#coupon-stat-rate').textContent = (total ? Math.round((redeemedCount / total) * 100) : 0) + '%';
+    renderCouponHistory();
+    if (status) status.textContent = total > couponRows.length
+      ? 'يعرض السجل آخر ' + couponRows.length + ' قسيمة من إجمالي ' + total + '.'
+      : 'تم تحديث السجل. عدد القسائم: ' + total + '.';
+  } catch (error) {
+    if (status) status.textContent = error.message || 'تعذر تحميل سجل القسائم.';
+  } finally {
+    if (button) button.disabled = false;
+  }
+}
 async function lookupCoupon(rawCode) {
   const code = String(rawCode || '').trim();
   if (!code) {
@@ -206,6 +262,7 @@ redeemButton?.addEventListener('click', async () => {
     });
     renderCoupon(response.coupon, 'تم صرف الخصم بنجاح. تم إغلاق القسيمة ولا يمكن استخدامها مرة أخرى.');
     setCameraStatus('نجاح: تم صرف القسيمة وتسجيلها كمستخدمة.', 'success');
+    void refreshCouponList();
   } catch (error) {
     setCameraStatus(error.message || 'تعذر تسجيل صرف القسيمة.', 'error');
     try {
@@ -219,6 +276,10 @@ redeemButton?.addEventListener('click', async () => {
     redeemButton.textContent = 'تأكيد صرف الخصم';
   }
 });
+
+$('#admin-coupons-refresh')?.addEventListener('click', () => void refreshCouponList());
+$('#admin-coupon-filter')?.addEventListener('change', renderCouponHistory);
+void refreshCouponList();
 
 window.addEventListener('pagehide', stopCamera);
 window.addEventListener('hashchange', () => {
