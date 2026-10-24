@@ -67,8 +67,12 @@ function getPreviewMedia() {
   if (changedWithoutFile) return { type: selectedType, mediaUrl: '', posterUrl: '' };
   return {
     type: selectedType,
-    mediaUrl: localMediaUrl || (banner?.mediaUrl || ''),
-    posterUrl: localPosterUrl || (banner?.posterUrl || '')
+    mediaUrl: $('#hero-banner-remove-media').checked && !$('#hero-banner-media-file').files[0]
+      ? ''
+      : (localMediaUrl || (banner?.mediaUrl || '')),
+    posterUrl: $('#hero-banner-remove-poster').checked && !$('#hero-banner-poster-file').files[0]
+      ? ''
+      : (localPosterUrl || (banner?.posterUrl || ''))
   };
 }
 
@@ -81,9 +85,9 @@ function renderPreview() {
     image.hidden = !draft.posterUrl;
     image.src = draft.posterUrl || '';
     video.hidden = false;
+    video.poster = draft.posterUrl || '';
     if (video.src !== draft.mediaUrl) {
       video.src = draft.mediaUrl;
-      video.poster = draft.posterUrl || '';
       video.load();
     }
   } else {
