@@ -17,15 +17,34 @@ const dashboardState = {
   products: [],
   categories: [],
   reservations: [],
+  customers: [],
   editingId: null
 };
 
-let { products, categories, reservations } = dashboardState;
+let { products, categories, reservations, customers } = dashboardState;
 let editingId = dashboardState.editingId;
 function renderStats(){$('#count-products').textContent=products.length;$('#count-categories').textContent=categories.length;$('#count-available').textContent=products.filter(p=>p.available).length;$('#count-reservations').textContent=reservations.length;document.querySelectorAll('[data-sidebar-count="reservations"]').forEach(node=>node.textContent=reservations.length);}
 function renderProducts(){const query=$('#search').value.trim().toLowerCase();const filtered=products.filter(p=>!query||`${p.nameAr} ${p.nameEn}`.toLowerCase().includes(query));$('#products-body').innerHTML=filtered.map(p=>`<tr><td>${p.imageUrl?`<img class="product-thumb" src="${escapeHtml(p.imageUrl)}" alt="" loading="lazy">`:''}<strong>${escapeHtml(p.nameAr)}</strong><small>${escapeHtml(p.nameEn)}</small></td><td>${escapeHtml(categoryName(p.categoryId))}</td><td class="price">AED ${Number(p.price).toFixed(0)}</td><td>${p.videoKey?'<span class="status on">متوفر</span>':'<span class="status off">غير مضاف</span>'}</td><td><span class="status ${p.available?'on':'off'}">${p.available?'متاح':'مخفي'}</span></td><td class="actions"><button data-video="${p.id}">فيديو</button><button data-edit="${p.id}">تعديل</button><button data-delete="${p.id}" class="danger">حذف</button></td></tr>`).join('')||'<tr><td colspan="6" class="empty">لا توجد أصناف</td></tr>';}
 function renderCategories(){$('#categories-body').innerHTML=categories.map((c,index)=>`<tr><td>${index+1}</td><td><strong>${escapeHtml(c.nameAr)}</strong></td><td>${escapeHtml(c.nameEn)}</td><td><span class="status ${c.active?'on':'off'}">${c.active?'نشط':'مخفي'}</span></td></tr>`).join('')||'<tr><td colspan="4" class="empty">لا توجد أقسام</td></tr>';}
 function renderReservations(){const rows=reservations.map(r=>`<tr><td><strong>${escapeHtml(r.name)}</strong><small>${r.notes?escapeHtml(r.notes):'—'}</small></td><td>${escapeHtml(r.date)}<small>${escapeHtml(r.time)}</small></td><td>${Number(r.guests)}</td><td dir="ltr">${escapeHtml(r.phone)}</td><td><span class="status ${r.status==='confirmed'?'on':r.status==='cancelled'?'off':'pending'}">${r.status==='confirmed'?'مؤكد':r.status==='cancelled'?'ملغي':'قيد المراجعة'}</span></td><td class="actions"><button data-res-status="confirmed" data-id="${r.id}">تأكيد</button><button data-res-status="cancelled" data-id="${r.id}" class="danger">إلغاء</button></td></tr>`).join('');$('#reservations-body').innerHTML=rows||'<tr><td colspan="6" class="empty">لا توجد حجوزات حاليًا.</td></tr>';}
+function customerDate(value){if(!value)return '—';const date=new Date(value);return Number.isNaN(date.getTime())?'—':date.toLocaleDateString('ar-AE');}
+function renderCustomers(){
+  const rows=(customers||[]).map(customer=>{
+    const sms=customer.sms_marketing_consent===true;
+    const whatsapp=customer.whatsapp_marketing_consent===true;
+    return `<tr>
+      <td><strong>${escapeHtml(customer.name)}</strong><small>عميل منذ ${escapeHtml(customerDate(customer.first_seen_at))}</small></td>
+      <td dir="ltr">${escapeHtml(customer.phone)}</td>
+      <td>${Number(customer.reservation_count||0)}</td>
+      <td><span class="status ${sms?'on':'off'}">${sms?'موافق':'غير موافق'}</span></td>
+      <td><span class="status ${whatsapp?'on':'off'}">${whatsapp?'موافق':'غير موافق'}</span></td>
+      <td>${escapeHtml(customerDate(customer.last_reservation_at))}</td>
+      <td class="actions">${sms?'<button data-customer-unsubscribe="sms" data-id="'+Number(customer.id)+'" class="danger">إيقاف SMS</button>':''}${whatsapp?'<button data-customer-unsubscribe="whatsapp" data-id="'+Number(customer.id)+'" class="danger">إيقاف WhatsApp</button>':''}</td>
+    </tr>`;
+  }).join('');
+  $('#customers-body').innerHTML=rows||'<tr><td colspan="7" class="empty">لا توجد سجلات عملاء في قاعدة البيانات بعد.</td></tr>';
+  document.querySelectorAll('[data-sidebar-count="customers"]').forEach(node=>node.textContent=(customers||[]).length);
+}
 function openModal(product=null){editingId=product?.id||null;$('#modal-title').textContent=editingId?'تعديل الصنف':'إضافة صنف جديد';$('#name-ar').value=product?.nameAr||'';$('#name-en').value=product?.nameEn||'';$('#price').value=product?.price??'';$('#image-url').value=product?.imageUrl&&!product.imageKey?product.imageUrl:'';$('#description-ar').value=product?.descriptionAr||'';$('#category').innerHTML=categories.map(c=>`<option value="${escapeHtml(c.id)}" ${product?.categoryId===c.id?'selected':''}>${escapeHtml(c.nameAr)}</option>`).join('');$('#available').checked=product?.available??true;$('#video-file').value='';$('#selected-file').textContent='';$('#remove-video').hidden=!product?.videoKey;updateVideoPreview(product?.videoUrl||'');$('#image-file').value='';$('#selected-image').textContent='';$('#remove-image').hidden=!product?.imageKey;updateImagePreview(product?.imageUrl||'');$('#modal').classList.add('show');$('#modal').setAttribute('aria-hidden','false');$('#name-ar').focus();}
 function closeModal(){$('#modal').classList.remove('show');$('#modal').setAttribute('aria-hidden','true');editingId=null;}
 function updateVideoPreview(url){const wrap=$('#video-preview'),player=$('#video-preview-player');if(!url){wrap.hidden=true;player.removeAttribute('src');player.load();return}player.src=url;wrap.hidden=false;}
@@ -41,13 +60,14 @@ function syncSidebarState(){
     toggle.querySelector('span').textContent=collapsed?'›':'‹';
   }
 }
-function showSection(sectionId){document.querySelectorAll('.admin-section').forEach(s=>s.classList.remove('section-visible'));document.querySelectorAll('[data-section]').forEach(link=>link.classList.toggle('active',link.dataset.section===sectionId));const titleMap={dashboard:'نظرة عامة',products:'إدارة الأصناف',categories:'إدارة الأقسام',offers:'عروض اليوم',reservations:'حجوزات الطاولات',settings:'إعدادات الموقع'};$('#page-title').textContent=titleMap[sectionId]||'إدارة ZORONA';$('#dashboard-stats').style.display=sectionId==='dashboard'?'':'none';if(sectionId==='dashboard')return;const section=document.getElementById(sectionId);if(section)section.classList.add('section-visible');}
+function showSection(sectionId){document.querySelectorAll('.admin-section').forEach(s=>s.classList.remove('section-visible'));document.querySelectorAll('[data-section]').forEach(link=>link.classList.toggle('active',link.dataset.section===sectionId));const titleMap={dashboard:'نظرة عامة',products:'إدارة الأصناف',categories:'إدارة الأقسام',offers:'عروض اليوم',reservations:'حجوزات الطاولات',customers:'العملاء والإشعارات',settings:'إعدادات الموقع'};$('#page-title').textContent=titleMap[sectionId]||'إدارة ZORONA';$('#dashboard-stats').style.display=sectionId==='dashboard'?'':'none';if(sectionId==='dashboard')return;const section=document.getElementById(sectionId);if(section)section.classList.add('section-visible');}
 async function load(){
   $('#connection').textContent='جارٍ الاتصال…';
   const resources=[
     ['categories','/api/categories'],
     ['products','/api/products'],
-    ['reservations','/api/reservations']
+    ['reservations','/api/reservations'],
+    ['customers','/api/customers']
   ];
   const results=await Promise.allSettled(resources.map(([,path])=>request(path)));
   const failures=[];
@@ -58,13 +78,15 @@ async function load(){
       if(key==='categories')categories=Array.isArray(value)?value:[];
       if(key==='products')products=Array.isArray(value)?value:[];
       if(key==='reservations')reservations=Array.isArray(value)?value:[];
+      if(key==='customers')customers=Array.isArray(value)?value:[];
     }else failures.push(resources[index][0]+': '+(result.reason?.message||'تعذر تحميل البيانات'));
   });
   dashboardState.products=products;
   renderTodayOfferProductOptions($('#today-offer-product')?.value||'');
   dashboardState.categories=categories;
   dashboardState.reservations=reservations;
-  renderStats();renderProducts();renderCategories();renderReservations();
+  dashboardState.customers=customers;
+  renderStats();renderProducts();renderCategories();renderReservations();renderCustomers();
   $('#connection').textContent=failures.length?'متصل جزئيًا':'متصل';
   $('#connection').className='connected';
   $('#error').textContent=failures.length?'تعذر تحميل: '+failures.join(' — '):'';
@@ -122,6 +144,16 @@ $('#remove-video').addEventListener('click',async()=>{if(!editingId||!confirm('�
 $('#remove-image').addEventListener('click',async()=>{if(!editingId||!confirm('حذف صورة هذا المنتج؟'))return;try{await deleteImage(editingId);const p=products.find(x=>x.id===editingId);if(p){p.imageKey='';p.imageUrl=''}$('#image-file').value='';$('#selected-image').textContent='';$('#remove-image').hidden=true;updateImagePreview('');renderProducts()}catch(error){alert(error.message)}});
 $('#products-body').addEventListener('click',async(event)=>{const edit=event.target.dataset.edit,del=event.target.dataset.delete,video=event.target.dataset.video;if(edit)return openModal(products.find(p=>p.id===edit));if(video){const product=products.find(p=>p.id===video);if(!product?.videoUrl)return alert('لا يوجد فيديو تحضير مضاف لهذا الصنف.');window.open(product.videoUrl,'_blank','noopener');return}if(del){const product=products.find(p=>p.id===del);if(!product||!confirm(`حذف «${product.nameAr}»؟`))return;try{await request(`/api/products/${del}`,{method:'DELETE'});await load()}catch(error){alert(error.message)}}});
 $('#reservations-body').addEventListener('click',async event=>{const id=event.target.dataset.id,status=event.target.dataset.resStatus;if(!id||!status)return;try{await request(`/api/reservations/${id}`,{method:'PATCH',body:JSON.stringify({status})});await load()}catch(error){alert(error.message)}});
+$('#refresh-customers')?.addEventListener('click',()=>void load());
+$('#customers-body')?.addEventListener('click',async event=>{
+  const button=event.target.closest('[data-customer-unsubscribe]');
+  if(!button)return;
+  const id=button.dataset.id,channel=button.dataset.customerUnsubscribe;
+  const label=channel==='sms'?'رسائل SMS':'رسائل WhatsApp';
+  if(!id||!channel||!confirm(`إيقاف موافقة ${label} لهذا العميل؟`))return;
+  try{await request(`/api/customers/${id}/consent`,{method:'PATCH',body:JSON.stringify({channel,enabled:false})});await load();}
+  catch(error){alert(error.message||'تعذر تحديث موافقة العميل.');}
+});
 $('#product-form').addEventListener('submit',async event=>{event.preventDefault();const submit=$('#product-form .submit'),progress=$('#upload-progress');submit.disabled=true;try{const payload={categoryId:$('#category').value,nameAr:$('#name-ar').value,nameEn:$('#name-en').value,descriptionAr:$('#description-ar').value,imageUrl:$('#image-url').value.trim(),price:Number($('#price').value),available:$('#available').checked};let saved=editingId?await request(`/api/products/${editingId}`,{method:'PATCH',body:JSON.stringify(payload)}):await request('/api/products',{method:'POST',body:JSON.stringify(payload)});const imageFile=$('#image-file').files[0];if(imageFile){if(imageFile.size>15*1024*1024)throw new Error('الحد الأقصى للصورة 15MB.');if(!['image/jpeg','image/png','image/webp','image/avif'].includes(imageFile.type))throw new Error('الصيغ المسموحة: JPG وPNG وWebP وAVIF.');progress.hidden=false;progress.querySelector('span').style.width='0%';progress.querySelector('small').textContent='جاري رفع الصورة… 0%';const key=await uploadFile('/api/images/presign',saved.id,imageFile,percent=>{progress.querySelector('span').style.width=`${percent}%`;progress.querySelector('small').textContent=`جاري رفع الصورة… ${percent}%`},'فشل رفع الصورة إلى التخزين.');saved=await request(`/api/products/${saved.id}`,{method:'PATCH',body:JSON.stringify({imageKey:key,imageUrl:''})})}const file=$('#video-file').files[0];if(file){if(file.size>120*1024*1024)throw new Error('الحد الأقصى للفيديو 120MB.');if(!['video/mp4','video/webm','video/quicktime'].includes(file.type))throw new Error('الصيغ المسموحة: MP4 وWebM وMOV.');progress.hidden=false;progress.querySelector('span').style.width='0%';progress.querySelector('small').textContent='جاري رفع الفيديو… 0%';const key=await uploadFile('/api/videos/presign',saved.id,file,percent=>{progress.querySelector('span').style.width=`${percent}%`;progress.querySelector('small').textContent=`جاري رفع الفيديو… ${percent}%`},'فشل رفع الفيديو إلى التخزين.');await request(`/api/products/${saved.id}`,{method:'PATCH',body:JSON.stringify({videoKey:key})})}progress.hidden=true;closeModal();await load()}catch(error){progress.hidden=true;alert(error.message)}finally{submit.disabled=false}});
 $('#settings-form').addEventListener('submit',event=>{event.preventDefault();localStorage.setItem('ARABISK_API_BASE',$('#api-base').value.trim().replace(/\/$/,''));localStorage.setItem('ARABISK_SITE_NAME',$('#site-name').value.trim());localStorage.setItem('ARABISK_SITE_DESCRIPTION',$('#site-description').value.trim());$('#settings-message').textContent='تم حفظ الإعدادات.';setTimeout(()=>$('#settings-message').textContent='',2500);load()});
 $('#today-offer-form')?.addEventListener('submit',async event=>{

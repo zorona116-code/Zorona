@@ -1,6 +1,7 @@
 import { normalizePhone } from '../utils/phone.js';
 import { isValidDateOnly } from '../utils/input.js';
 import { getUaeDateOnly, parseUaeLocalDateTime } from '../utils/uae-time.js';
+import { recordCustomerReservation } from '../db.js';
 
 const RESERVATION_STATUSES = new Set(['pending', 'confirmed', 'cancelled']);
 
@@ -37,7 +38,13 @@ export function createReservationService({ repository, cleanText, nextReservatio
 
     if (idempotencyKey) {
       const existing = reservations.findByIdempotencyKey(idempotencyKey);
-      if (existing) return existing;
+      if (existing) {
+        const customerResult = await recordCustomerReservation(existing, body);
+        if ((body.marketingSmsConsent === true || body.marketingWhatsappConsent === true) && !customerResult.ok) {
+          throw new ReservationServiceError('Customer consent could not be saved. Please try again.', 503);
+        }
+        return existing;
+      }
     }
 
     if (!name || !phone || !date || !time || !Number.isInteger(guests) || guests < 1 || guests > 20) {
@@ -79,6 +86,11 @@ export function createReservationService({ repository, cleanText, nextReservatio
       reservations.removeById(reservation.id);
       if (!Number.isInteger(error?.status)) error.status = 503;
       throw error;
+    }
+
+    const customerResult = await recordCustomerReservation(reservation, body);
+    if ((body.marketingSmsConsent === true || body.marketingWhatsappConsent === true) && !customerResult.ok) {
+      throw new ReservationServiceError('Customer consent could not be saved. Please try again.', 503);
     }
 
     return reservation;

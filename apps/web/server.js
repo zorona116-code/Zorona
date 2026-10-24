@@ -19,6 +19,7 @@ import { registerProductRoutes } from './routes/product-routes.js';
 import { createSmartMenuService } from './services/smart-menu-service.js';
 import { createReservationService } from './services/reservation-service.js';
 import { registerReservationRoutes } from './routes/reservation-routes.js';
+import { registerCustomerRoutes } from './routes/customer-routes.js';
 import { createRateLimiter } from './middleware/rate-limit.js';
 import { configureHttpSecurity } from './middleware/http-security.js';
 import { createNextPrefixedId } from './utils/id-generator.js';
@@ -137,6 +138,7 @@ registerReservationRoutes(app, {
   requireAdminApiKey,
   reservationRateLimit
 });
+registerCustomerRoutes(app, { requireAdminApiKey });
 
 const mediaService = createMediaService({
   repository: stateRepository.products,
