@@ -178,6 +178,37 @@ async function ensureSchema() {
         redeemed_by TEXT NOT NULL DEFAULT 'admin'
       );
       CREATE INDEX IF NOT EXISTS coupon_campaign_redemptions_campaign_idx ON coupon_campaign_redemptions (campaign_id, redeemed_at DESC);
+
+      CREATE TABLE IF NOT EXISTS marketing_campaigns (
+        id BIGSERIAL PRIMARY KEY,
+        title TEXT NOT NULL,
+        template_name TEXT NOT NULL,
+        language_code TEXT NOT NULL DEFAULT 'ar',
+        coupon_campaign_id BIGINT NOT NULL REFERENCES coupon_campaigns(id) ON DELETE RESTRICT,
+        status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'sending', 'completed', 'partial')),
+        created_by TEXT NOT NULL DEFAULT 'admin',
+        created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+        started_at TIMESTAMPTZ,
+        finished_at TIMESTAMPTZ
+      );
+      CREATE INDEX IF NOT EXISTS marketing_campaigns_created_idx ON marketing_campaigns (created_at DESC);
+      CREATE TABLE IF NOT EXISTS marketing_campaign_recipients (
+        id BIGSERIAL PRIMARY KEY,
+        campaign_id BIGINT NOT NULL REFERENCES marketing_campaigns(id) ON DELETE CASCADE,
+        customer_id BIGINT NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+        phone TEXT NOT NULL,
+        customer_name TEXT NOT NULL DEFAULT '',
+        status TEXT NOT NULL DEFAULT 'queued' CHECK (status IN ('queued', 'sending', 'sent', 'failed', 'skipped')),
+        provider_message_id TEXT,
+        error_code TEXT,
+        error_message TEXT,
+        attempted_at TIMESTAMPTZ,
+        sent_at TIMESTAMPTZ,
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+        UNIQUE (campaign_id, customer_id)
+      );
+      CREATE INDEX IF NOT EXISTS marketing_recipients_status_idx ON marketing_campaign_recipients (campaign_id, status, id);
+
       ALTER TABLE customers ADD COLUMN IF NOT EXISTS password_hash TEXT;
       ALTER TABLE customers ADD COLUMN IF NOT EXISTS account_created_at TIMESTAMPTZ;
       UPDATE customers SET account_created_at = created_at WHERE password_hash IS NOT NULL AND account_created_at IS NULL;
@@ -943,4 +974,256 @@ export async function redeemCustomerAppCoupon(code, redeemedBy = 'admin') {
   return existing
     ? { status: 'already_redeemed', coupon: existing }
     : { status: 'not_found', coupon: null };
+}
+
+
+const MARKETING_CAMPAIGN_SELECT = `
+  SELECT m.id, m.title, m.template_name AS "templateName",
+         m.language_code AS "languageCode", m.coupon_campaign_id AS "couponCampaignId",
+         m.status, m.created_by AS "createdBy", m.created_at AS "createdAt",
+         m.started_at AS "startedAt", m.finished_at AS "finishedAt",
+         cc.title AS "couponTitle", cc.code AS "couponCode",
+         cc.discount_percent AS "couponDiscountPercent",
+         cc.expires_at AS "couponExpiresAt", cc.enabled AS "couponEnabled",
+         cc.customer_id AS "couponCustomerId", cc.max_uses AS "couponMaxUses",
+         cc.usage_count AS "couponUsageCount",
+         COUNT(r.id)::int AS "recipientCount",
+         COUNT(r.id) FILTER (WHERE r.status = 'sent')::int AS "sentCount",
+         COUNT(r.id) FILTER (WHERE r.status = 'failed')::int AS "failedCount",
+         COUNT(r.id) FILTER (WHERE r.status = 'skipped')::int AS "skippedCount",
+         COUNT(r.id) FILTER (WHERE r.status IN ('queued', 'sending'))::int AS "pendingCount"
+    FROM marketing_campaigns m
+    JOIN coupon_campaigns cc ON cc.id = m.coupon_campaign_id
+    LEFT JOIN marketing_campaign_recipients r ON r.campaign_id = m.id
+`;
+
+function mapMarketingCampaign(row) {
+  if (!row) return null;
+  return {
+    id: Number(row.id),
+    title: row.title,
+    templateName: row.templateName,
+    languageCode: row.languageCode,
+    couponCampaignId: Number(row.couponCampaignId),
+    couponTitle: row.couponTitle,
+    couponCode: row.couponCode,
+    couponDiscountPercent: Number(row.couponDiscountPercent || 0),
+    couponExpiresAt: row.couponExpiresAt || null,
+    couponEnabled: row.couponEnabled === true,
+    couponCustomerId: row.couponCustomerId == null ? null : Number(row.couponCustomerId),
+    couponMaxUses: row.couponMaxUses == null ? null : Number(row.couponMaxUses),
+    couponUsageCount: Number(row.couponUsageCount || 0),
+    status: row.status,
+    createdBy: row.createdBy,
+    createdAt: row.createdAt,
+    startedAt: row.startedAt || null,
+    finishedAt: row.finishedAt || null,
+    recipientCount: Number(row.recipientCount || 0),
+    sentCount: Number(row.sentCount || 0),
+    failedCount: Number(row.failedCount || 0),
+    skippedCount: Number(row.skippedCount || 0),
+    pendingCount: Number(row.pendingCount || 0)
+  };
+}
+
+export async function countWhatsAppMarketingRecipients() {
+  if (!dbReady) throw accountNotConfiguredError();
+  await ensureSchema();
+  const result = await getPool().query(
+    "SELECT COUNT(*)::int AS count FROM customers WHERE whatsapp_marketing_consent = TRUE AND phone ~ '^\\+[1-9][0-9]{7,14}$'"
+  );
+  return Number(result.rows[0]?.count || 0);
+}
+
+export async function createMarketingCampaign(input) {
+  if (!dbReady) throw accountNotConfiguredError();
+  await ensureSchema();
+  const title = String(input.title || '').trim().replace(/\s+/g, ' ').slice(0, 100);
+  const templateName = String(input.templateName || '').trim();
+  const languageCode = String(input.languageCode || 'ar').trim();
+  const couponCampaignId = Number(input.couponCampaignId);
+  if (title.length < 2 || title.length > 100 || !/^[a-z0-9_]{1,512}$/.test(templateName) ||
+      !['ar', 'ar_AE', 'en', 'en_US'].includes(languageCode) ||
+      !Number.isSafeInteger(couponCampaignId) || couponCampaignId < 1) {
+    const error = new Error('بيانات الحملة غير صالحة.');
+    error.status = 400;
+    throw error;
+  }
+  const coupon = await getPool().query(
+    'SELECT id, enabled, customer_id, expires_at, max_uses, usage_count FROM coupon_campaigns WHERE id = $1',
+    [couponCampaignId]
+  );
+  if (!coupon.rowCount) {
+    const error = new Error('قسيمة العرض المحددة غير موجودة.');
+    error.status = 404;
+    throw error;
+  }
+  const row = coupon.rows[0];
+  if (row.customer_id !== null || row.enabled !== true ||
+      (row.expires_at && new Date(row.expires_at).getTime() <= Date.now()) ||
+      (row.max_uses !== null && Number(row.usage_count) >= Number(row.max_uses))) {
+    const error = new Error('اختر قسيمة عامة ومفعلة وصالحة للاستخدام.');
+    error.status = 400;
+    throw error;
+  }
+  const result = await getPool().query(
+    'INSERT INTO marketing_campaigns (title, template_name, language_code, coupon_campaign_id, created_by) VALUES ($1,$2,$3,$4,$5) RETURNING id',
+    [title, templateName, languageCode, couponCampaignId, String(input.createdBy || 'admin').slice(0, 80)]
+  );
+  return getMarketingCampaignById(Number(result.rows[0].id));
+}
+
+export async function getMarketingCampaignById(id) {
+  if (!dbReady) throw accountNotConfiguredError();
+  await ensureSchema();
+  const result = await getPool().query(
+    MARKETING_CAMPAIGN_SELECT + ' WHERE m.id = $1 GROUP BY m.id, cc.id',
+    [id]
+  );
+  return mapMarketingCampaign(result.rows[0]);
+}
+
+export async function listMarketingCampaigns(limit = 100) {
+  if (!dbReady) throw accountNotConfiguredError();
+  await ensureSchema();
+  const safeLimit = Math.min(300, Math.max(1, Math.trunc(Number(limit) || 100)));
+  const result = await getPool().query(
+    MARKETING_CAMPAIGN_SELECT + ' GROUP BY m.id, cc.id ORDER BY m.created_at DESC LIMIT $1',
+    [safeLimit]
+  );
+  return result.rows.map(mapMarketingCampaign);
+}
+
+export async function prepareMarketingCampaignRecipients(campaignId) {
+  if (!dbReady) throw accountNotConfiguredError();
+  await ensureSchema();
+  const client = await getPool().connect();
+  try {
+    await client.query('BEGIN');
+    const found = await client.query(
+      'SELECT m.id, m.status, cc.enabled AS coupon_enabled, cc.customer_id AS coupon_customer_id, cc.expires_at, cc.max_uses, cc.usage_count FROM marketing_campaigns m JOIN coupon_campaigns cc ON cc.id = m.coupon_campaign_id WHERE m.id = $1 FOR UPDATE OF m',
+      [campaignId]
+    );
+    if (!found.rowCount) {
+      await client.query('ROLLBACK');
+      return { status: 'not_found', insertedCount: 0 };
+    }
+    const campaign = found.rows[0];
+    if (campaign.status !== 'draft') {
+      await client.query('COMMIT');
+      return { status: campaign.status, insertedCount: null };
+    }
+    if (campaign.coupon_enabled !== true || campaign.coupon_customer_id !== null ||
+        (campaign.expires_at && new Date(campaign.expires_at).getTime() <= Date.now()) ||
+        (campaign.max_uses !== null && Number(campaign.usage_count) >= Number(campaign.max_uses))) {
+      await client.query('ROLLBACK');
+      return { status: 'coupon_unavailable', insertedCount: 0 };
+    }
+    const inserted = await client.query(
+      `INSERT INTO marketing_campaign_recipients (campaign_id, customer_id, phone, customer_name)
+       SELECT $1, c.id, c.phone, c.name
+         FROM customers c
+        WHERE c.whatsapp_marketing_consent = TRUE
+          AND c.phone ~ '^\\+[1-9][0-9]{7,14}$'
+       ON CONFLICT (campaign_id, customer_id) DO NOTHING
+       RETURNING id`,
+      [campaignId]
+    );
+    if (inserted.rowCount > 0) {
+      await client.query("UPDATE marketing_campaigns SET status = 'sending', started_at = COALESCE(started_at, now()) WHERE id = $1", [campaignId]);
+    }
+    await client.query('COMMIT');
+    return { status: inserted.rowCount > 0 ? 'sending' : 'no_recipients', insertedCount: inserted.rowCount };
+  } catch (error) {
+    try { await client.query('ROLLBACK'); } catch {}
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
+export async function claimMarketingCampaignRecipients(campaignId, limit = 10) {
+  if (!dbReady) throw accountNotConfiguredError();
+  await ensureSchema();
+  const safeLimit = Math.min(10, Math.max(1, Math.trunc(Number(limit) || 10)));
+  const client = await getPool().connect();
+  try {
+    await client.query('BEGIN');
+    await client.query(
+      "UPDATE marketing_campaign_recipients SET status = 'queued', updated_at = now(), error_code = NULL, error_message = NULL WHERE campaign_id = $1 AND status = 'sending' AND attempted_at < now() - interval '5 minutes'",
+      [campaignId]
+    );
+    await client.query(
+      `UPDATE marketing_campaign_recipients r
+          SET status = 'skipped', error_code = 'CONSENT_REVOKED',
+              error_message = 'Marketing consent is no longer active.', updated_at = now()
+         WHERE r.campaign_id = $1 AND r.status = 'queued'
+           AND NOT EXISTS (
+             SELECT 1 FROM customers c
+              WHERE c.id = r.customer_id AND c.phone = r.phone
+                AND c.whatsapp_marketing_consent = TRUE
+                AND c.phone ~ '^\\+[1-9][0-9]{7,14}$'
+           )`,
+      [campaignId]
+    );
+    const claimed = await client.query(
+      `WITH picked AS (
+         SELECT r.id
+           FROM marketing_campaign_recipients r
+           JOIN customers c ON c.id = r.customer_id
+          WHERE r.campaign_id = $1 AND r.status = 'queued'
+            AND c.whatsapp_marketing_consent = TRUE AND c.phone = r.phone
+          ORDER BY r.id
+          LIMIT $2
+          FOR UPDATE OF r SKIP LOCKED
+       )
+       UPDATE marketing_campaign_recipients r
+          SET status = 'sending', attempted_at = now(), updated_at = now(),
+              error_code = NULL, error_message = NULL
+         FROM picked
+        WHERE r.id = picked.id
+       RETURNING r.id, r.customer_id AS "customerId", r.phone, r.customer_name AS "customerName"`,
+      [campaignId, safeLimit]
+    );
+    await client.query('COMMIT');
+    return claimed.rows;
+  } catch (error) {
+    try { await client.query('ROLLBACK'); } catch {}
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
+export async function updateMarketingCampaignRecipient(id, status, details = {}) {
+  if (!dbReady) throw accountNotConfiguredError();
+  await ensureSchema();
+  if (!['sent', 'failed'].includes(status)) throw new Error('Invalid recipient status.');
+  await getPool().query(
+    `UPDATE marketing_campaign_recipients
+        SET status = $2, provider_message_id = $3, error_code = $4,
+            error_message = $5, sent_at = CASE WHEN $2 = 'sent' THEN now() ELSE sent_at END,
+            updated_at = now()
+      WHERE id = $1`,
+    [id, status, String(details.providerMessageId || '').slice(0, 300) || null,
+      String(details.errorCode || '').slice(0, 100) || null,
+      String(details.errorMessage || '').slice(0, 500) || null]
+  );
+}
+
+export async function finishMarketingCampaignIfDone(campaignId) {
+  if (!dbReady) throw accountNotConfiguredError();
+  await ensureSchema();
+  await getPool().query(
+    `UPDATE marketing_campaigns m
+        SET status = CASE
+          WHEN EXISTS (SELECT 1 FROM marketing_campaign_recipients r WHERE r.campaign_id = m.id AND r.status IN ('failed', 'skipped')) THEN 'partial'
+          ELSE 'completed'
+        END,
+        finished_at = COALESCE(finished_at, now())
+      WHERE m.id = $1 AND m.status = 'sending'
+        AND NOT EXISTS (SELECT 1 FROM marketing_campaign_recipients r WHERE r.campaign_id = m.id AND r.status IN ('queued', 'sending'))`,
+    [campaignId]
+  );
+  return getMarketingCampaignById(campaignId);
 }
