@@ -61,8 +61,9 @@ try {
   assert.equal(products.status, 200);
   assert.equal(products.body.length, 0, 'no products');
 
-  // removed APIs are gone
-  for (const path of ['/api/orders', '/api/customers', '/api/experiences', '/api/revenue/summary', '/api/shams/status', '/api/promotions/install']) {
+  // Removed public APIs are gone; customer data remains available only to authenticated admins.
+  assert.equal((await fetch(`${WEB}/api/customers`)).status, 401, '/api/customers requires admin authentication');
+  for (const path of ['/api/orders', '/api/experiences', '/api/revenue/summary', '/api/shams/status', '/api/promotions/install']) {
     assert.equal((await fetch(WEB + path)).status, 404, `${path} should be removed`);
   }
 
