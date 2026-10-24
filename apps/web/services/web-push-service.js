@@ -111,8 +111,15 @@ function encryptPayload(subscription, payload) {
 
 function postPush(endpoint, body, keys) {
   const target = new URL(endpoint);
-  if (target.protocol !== 'https:' || target.username || target.password) {
-    throw new Error('Web Push endpoint must be a safe HTTPS URL.');
+  const host = target.hostname.toLowerCase();
+  const supportedHost = host === 'fcm.googleapis.com' ||
+    host === 'web.push.apple.com' ||
+    host === 'notify.windows.com' ||
+    host.endsWith('.notify.windows.com') ||
+    host === 'push.services.mozilla.com' ||
+    host.endsWith('.push.services.mozilla.com');
+  if (target.protocol !== 'https:' || target.username || target.password || !supportedHost) {
+    throw new Error('Web Push endpoint is not a supported HTTPS push service.');
   }
 
   const token = signVapidToken(target.origin, keys);
