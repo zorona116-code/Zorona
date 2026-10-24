@@ -85,6 +85,8 @@
     if (description) description.content = t.description;
 
     setText('.app-header .brand span', t.brandLine);
+    const languageToggle = document.querySelector('#lang-toggle');
+    if (languageToggle) languageToggle.setAttribute('aria-label', language === 'en' ? 'Change language' : 'تغيير اللغة');
     const nav = document.querySelector('#app-header-nav');
     if (nav) {
       nav.setAttribute('aria-label', t.navLabel);
@@ -120,8 +122,8 @@
     const shortcuts = document.querySelector('#home-actions');
     if (shortcuts) shortcuts.setAttribute('aria-label', t.shortcuts);
 
-    setText('.today-offer-badge', t.todayBadge);
-    setText('.today-offer-title', t.todayTitle);
+    setPlaceholderText('.today-offer-badge', ['عرض اليوم', 'Today’s Offer'], t.todayBadge);
+    setPlaceholderText('.today-offer-title', ['اختيار اليوم من ZORONA', 'Today at ZORONA'], t.todayTitle);
     const todayAction = document.querySelector('.today-offer-action');
     if (todayAction) todayAction.innerHTML = t.todayAction + ' <span aria-hidden="true">←</span>';
 
@@ -137,6 +139,11 @@
     setText('#contact span', t.footerLine);
     const offerImage = document.querySelector('.today-offer-media img');
     if (offerImage) offerImage.alt = t.offerAlt;
+  }
+
+  function setPlaceholderText(selector, placeholders, value) {
+    const node = document.querySelector(selector);
+    if (node && placeholders.includes(node.textContent.trim())) node.textContent = value;
   }
 
   function setTextWithin(parent, selector, value) {
