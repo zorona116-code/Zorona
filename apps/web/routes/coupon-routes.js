@@ -3,6 +3,7 @@ import {
   getCustomerAccountFromSession,
   getOrCreateCustomerAppCoupon,
   getCustomerAppCouponByCode,
+  listCustomerAppCoupons,
   redeemCustomerAppCoupon
 } from '../db.js';
 
@@ -110,4 +111,17 @@ export function registerCouponRoutes(app, { requireAdminApiKey }) {
       return res.status(503).json({ code: 'COUPON_REDEEM_FAILED', message: 'تعذر صرف الخصم الآن. حاول مرة أخرى.' });
     }
   });
+  app.get('/api/admin/coupons', requireAdminApiKey, async (req, res) => {
+    res.setHeader('Cache-Control', 'no-store');
+    try {
+      const result = await listCustomerAppCoupons(100);
+      return res.json({
+        coupons: result.coupons.map(presentCoupon),
+        stats: result.stats
+      });
+    } catch {
+      return res.status(503).json({ code: 'COUPON_LIST_FAILED', message: 'تعذر تحميل سجل القسائم الآن.' });
+    }
+  });
+
 }
