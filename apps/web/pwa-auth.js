@@ -12,6 +12,8 @@
   const couponMessage = document.getElementById('pwa-coupon-message');
   const couponImage = document.getElementById('pwa-coupon-qr');
   const couponCode = document.getElementById('pwa-coupon-code');
+  const campaignSection = document.getElementById('pwa-campaign-coupons');
+  const campaignList = document.getElementById('pwa-campaign-coupons-list');
   const modeButtons = Array.from(document.querySelectorAll('[data-pwa-mode]'));
   if (!overlay || !registerForm || !loginForm || !message) return;
 
@@ -33,6 +35,65 @@
   function closeCoupon() {
     couponOverlay?.classList.remove('is-open');
     couponOverlay?.setAttribute('aria-hidden', 'true');
+  }
+
+
+  async function showCampaignCoupons() {
+    if (!campaignSection || !campaignList) return;
+    campaignSection.hidden = false;
+    campaignList.replaceChildren();
+    const loading = document.createElement('p');
+    loading.className = 'pwa-campaign-loading';
+    loading.textContent = 'جارٍ تحميل القسائم الإضافية…';
+    campaignList.append(loading);
+    try {
+      const response = await fetch('/api/account/campaign-coupons', {
+        credentials: 'same-origin',
+        cache: 'no-store',
+        headers: { Accept: 'application/json' }
+      });
+      let payload = {};
+      try { payload = await response.json(); } catch {}
+      if (!response.ok) throw new Error(payload.message || 'تعذر تحميل القسائم الإضافية.');
+      const coupons = Array.isArray(payload.coupons) ? payload.coupons : [];
+      campaignList.replaceChildren();
+      if (!coupons.length) {
+        campaignSection.hidden = true;
+        return;
+      }
+      for (const coupon of coupons) {
+        const card = document.createElement('article');
+        card.className = 'pwa-campaign-coupon';
+        const image = document.createElement('img');
+        image.className = 'pwa-campaign-coupon-qr';
+        image.src = coupon.qrDataUrl;
+        image.alt = 'رمز QR لقسيمة ' + (coupon.title || 'ZORONA');
+        image.loading = 'lazy';
+        const details = document.createElement('div');
+        details.className = 'pwa-campaign-coupon-details';
+        const title = document.createElement('strong');
+        title.textContent = coupon.title || 'قسيمة ZORONA';
+        const discount = document.createElement('b');
+        discount.textContent = 'خصم ' + Number(coupon.discountPercent || 0) + '%';
+        const code = document.createElement('code');
+        code.textContent = coupon.code || '';
+        const terms = document.createElement('small');
+        const parts = ['الحد الأدنى للطلب: ' + Number(coupon.minimumOrderAmount || 0).toFixed(2) + ' د.إ'];
+        if (coupon.expiresAt) {
+          const date = new Date(coupon.expiresAt);
+          if (!Number.isNaN(date.getTime())) parts.push('صالحة حتى ' + date.toLocaleDateString('ar-AE', { year: 'numeric', month: 'short', day: 'numeric', timeZone: 'Asia/Dubai' }));
+        }
+        parts.push('الاستخدامات: ' + Number(coupon.usageCount || 0) + ' / ' + (coupon.maxUses === null ? 'بلا حد' : String(coupon.maxUses)));
+        terms.textContent = parts.join(' · ');
+        details.append(title, discount, code, terms);
+        card.append(image, details);
+        campaignList.append(card);
+      }
+      campaignSection.hidden = false;
+    } catch (error) {
+      campaignList.replaceChildren();
+      campaignSection.hidden = true;
+    }
   }
 
   async function showCoupon() {
@@ -71,6 +132,7 @@
       couponTitle.textContent = 'قسيمة خصم ZORONA';
       couponMessage.textContent = error.message || 'تعذر تحميل القسيمة الآن. تحقق من اتصال الإنترنت وحاول مرة أخرى.';
     }
+    await showCampaignCoupons();
   }
 
   async function readJson(response) {
