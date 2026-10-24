@@ -15,6 +15,7 @@ const redeemButton = $('#coupon-redeem-button');
 
 let currentCoupon = null;
 let couponRows = [];
+let campaignRows = [];
 let couponStats = { total: 0, available: 0, redeemed: 0 };
 let cameraStream = null;
 let scanning = false;
@@ -65,24 +66,37 @@ function renderCoupon(coupon, message = '') {
     $('#coupon-result-phone').textContent = '—';
     $('#coupon-result-issued').textContent = '—';
     $('#coupon-result-redeemed').textContent = '—';
+    $('#coupon-result-minimum').textContent = '—';
+    $('#coupon-result-uses').textContent = '—';
+    $('#coupon-result-expiry').textContent = '—';
     $('#coupon-result-message').textContent = message || 'لم يتم العثور على القسيمة.';
     redeemButton.hidden = true;
     return;
   }
 
-  const redeemed = Boolean(coupon.redeemedAt);
-  $('#coupon-result-badge').className = 'status ' + (redeemed ? 'off' : 'on');
-  $('#coupon-result-badge').textContent = redeemed ? 'مستخدمة بالفعل' : 'صالحة للاستخدام';
+  const campaign = coupon.couponKind === 'campaign';
+  const unavailable = campaign ? coupon.redeemable !== true : Boolean(coupon.redeemedAt);
+  $('#coupon-result-badge').className = 'status ' + (unavailable ? 'off' : 'on');
+  $('#coupon-result-badge').textContent = unavailable
+    ? (campaign && coupon.isExpired ? 'منتهية الصلاحية' : campaign && coupon.isExhausted ? 'استُنفدت الاستخدامات' : campaign && !coupon.enabled ? 'موقوفة' : 'مستخدمة بالفعل')
+    : 'صالحة للاستخدام';
   $('#coupon-result-discount').textContent = 'خصم ' + Number(coupon.discountPercent || 0) + '%';
-  $('#coupon-result-name').textContent = coupon.customerName || '—';
+  $('#coupon-result-name').textContent = coupon.customerName || (campaign ? 'عرض عام' : '—');
   $('#coupon-result-phone').textContent = coupon.customerPhone || '—';
   $('#coupon-result-issued').textContent = formatDate(coupon.issuedAt);
-  $('#coupon-result-redeemed').textContent = formatDate(coupon.redeemedAt);
-  $('#coupon-result-message').textContent = message || (redeemed
-    ? 'هذه القسيمة صُرفت من قبل ولا يمكن استخدامها مرة ثانية.'
-    : 'القسيمة سليمة. اضغط «تأكيد صرف الخصم» بعد تطبيق الخصم للعميل.');
-  redeemButton.hidden = redeemed;
-  redeemButton.disabled = redeemed;
+  $('#coupon-result-redeemed').textContent = formatDate(campaign ? coupon.redeemedAt : coupon.redeemedAt);
+  $('#coupon-result-minimum').textContent = Number(coupon.minimumOrderAmount || 0).toFixed(2) + ' د.إ';
+  $('#coupon-result-uses').textContent = campaign
+    ? Number(coupon.usageCount || 0) + ' / ' + (coupon.maxUses === null ? 'بلا حد' : String(coupon.maxUses))
+    : (coupon.redeemedAt ? '1 / 1' : '0 / 1');
+  $('#coupon-result-expiry').textContent = formatDate(coupon.expiresAt);
+  $('#coupon-result-message').textContent = message || (unavailable
+    ? (campaign ? 'القسيمة غير متاحة للاستخدام؛ راجع تاريخ الصلاحية أو عدد الاستخدامات أو حالة التفعيل.' : 'هذه القسيمة صُرفت من قبل ولا يمكن استخدامها مرة ثانية.')
+    : (campaign && Number(coupon.minimumOrderAmount || 0) > 0
+      ? 'القسيمة متاحة. أدخل إجمالي الطلب قبل الصرف؛ الحد الأدنى ' + Number(coupon.minimumOrderAmount).toFixed(2) + ' د.إ.'
+      : 'القسيمة سليمة. اضغط «تأكيد صرف الخصم» بعد تطبيق الخصم للعميل.'));
+  redeemButton.hidden = unavailable;
+  redeemButton.disabled = unavailable;
 }
 
 
@@ -139,6 +153,123 @@ async function refreshCouponList() {
     if (button) button.disabled = false;
   }
 }
+
+function campaignState(campaign) {
+  if (campaign.isExpired) return { label: 'منتهية', className: 'is-expired' };
+  if (campaign.isExhausted) return { label: 'استُنفدت', className: 'is-exhausted' };
+  if (!campaign.enabled) return { label: 'موقوفة', className: 'is-off' };
+  return { label: 'فعالة', className: 'is-active' };
+}
+
+function renderCampaignList() {
+  const body = $('#campaign-coupons-body');
+  if (!body) return;
+  body.replaceChildren();
+  if (!campaignRows.length) {
+    const row = document.createElement('tr');
+    const cell = document.createElement('td');
+    cell.colSpan = 8;
+    cell.textContent = 'لا توجد قسائم حملات حتى الآن.';
+    row.append(cell);
+    body.append(row);
+    return;
+  }
+  for (const campaign of campaignRows) {
+    const row = document.createElement('tr');
+    const title = document.createElement('td'); title.textContent = campaign.title || '—';
+    const code = document.createElement('td');
+    const codeText = document.createElement('code'); codeText.className = 'campaign-code'; codeText.textContent = campaign.code || '—'; code.append(codeText);
+    const discount = document.createElement('td'); discount.textContent = Number(campaign.discountPercent || 0) + '%';
+    const customer = document.createElement('td'); customer.textContent = campaign.customerName ? campaign.customerName + ' · ' + (campaign.customerPhone || '') : 'عام';
+    const terms = document.createElement('td');
+    const expiryText = campaign.expiresAt ? formatDate(campaign.expiresAt) : 'بدون انتهاء';
+    terms.textContent = expiryText + ' · حد أدنى ' + Number(campaign.minimumOrderAmount || 0).toFixed(2) + ' د.إ';
+    const uses = document.createElement('td'); uses.textContent = Number(campaign.usageCount || 0) + ' / ' + (campaign.maxUses === null ? '∞' : String(campaign.maxUses));
+    const stateCell = document.createElement('td');
+    const state = campaignState(campaign);
+    const badge = document.createElement('span'); badge.className = 'campaign-status ' + state.className; badge.textContent = state.label; stateCell.append(badge);
+    const actionCell = document.createElement('td');
+    const action = document.createElement('button');
+    action.type = 'button'; action.className = 'campaign-action';
+    action.textContent = campaign.enabled ? 'إيقاف' : 'تفعيل';
+    action.disabled = campaign.isExpired || campaign.isExhausted;
+    action.addEventListener('click', () => void toggleCampaign(campaign));
+    actionCell.append(action);
+    row.append(title, code, discount, customer, terms, uses, stateCell, actionCell);
+    body.append(row);
+  }
+}
+
+async function refreshCampaignList() {
+  const status = $('#campaign-list-status');
+  const button = $('#campaign-coupons-refresh');
+  if (button) button.disabled = true;
+  if (status) status.textContent = 'جارٍ تحميل القسائم…';
+  try {
+    const result = await request('/api/admin/campaign-coupons');
+    campaignRows = Array.isArray(result.campaigns) ? result.campaigns : [];
+    renderCampaignList();
+    if (status) status.textContent = 'عدد الحملات: ' + campaignRows.length + '.';
+  } catch (error) {
+    if (status) status.textContent = error.message || 'تعذر تحميل الحملات.';
+  } finally {
+    if (button) button.disabled = false;
+  }
+}
+
+async function toggleCampaign(campaign) {
+  const nextEnabled = !campaign.enabled;
+  const action = nextEnabled ? 'تفعيل' : 'إيقاف';
+  if (!window.confirm('هل تريد ' + action + ' القسيمة «' + campaign.title + '»؟')) return;
+  try {
+    await request('/api/admin/campaign-coupons/' + encodeURIComponent(campaign.id), {
+      method: 'PATCH',
+      body: JSON.stringify({ enabled: nextEnabled })
+    });
+    await refreshCampaignList();
+    const status = $('#campaign-list-status');
+    if (status) status.textContent = 'تم ' + action + ' القسيمة بنجاح.';
+  } catch (error) {
+    const status = $('#campaign-list-status');
+    if (status) status.textContent = error.message || 'تعذر تعديل القسيمة.';
+  }
+}
+
+async function createCampaign(event) {
+  event.preventDefault();
+  const button = $('#campaign-create-button');
+  const status = $('#campaign-create-status');
+  const targetMode = $('#campaign-target-mode').value;
+  const title = $('#campaign-title').value.trim();
+  const rawExpiry = $('#campaign-expiry').value;
+  const expiresAt = rawExpiry ? new Date(rawExpiry + ':00+04:00').toISOString() : '';
+  const rawMax = $('#campaign-max-uses').value.trim();
+  const payload = {
+    title,
+    discountPercent: Number($('#campaign-discount').value),
+    expiresAt,
+    minimumOrderAmount: Number($('#campaign-minimum').value || 0),
+    maxUses: rawMax ? Number(rawMax) : null,
+    targetMode,
+    customerPhone: targetMode === 'customer' ? $('#campaign-customer-phone').value.trim() : ''
+  };
+  if (button) { button.disabled = true; button.textContent = 'جارٍ إنشاء القسيمة…'; }
+  if (status) { status.className = 'coupon-admin-status'; status.textContent = ''; }
+  try {
+    const result = await request('/api/admin/campaign-coupons', { method: 'POST', body: JSON.stringify(payload) });
+    if (status) { status.className = 'coupon-admin-status is-success'; status.textContent = 'تم إنشاء القسيمة. الكود: ' + result.campaign.code; }
+    $('#coupon-campaign-form').reset();
+    $('#campaign-discount').value = '15';
+    $('#campaign-minimum').value = '0';
+    $('#campaign-customer-phone-row').hidden = true;
+    await refreshCampaignList();
+  } catch (error) {
+    if (status) { status.className = 'coupon-admin-status is-error'; status.textContent = error.message || 'تعذر إنشاء القسيمة.'; }
+  } finally {
+    if (button) { button.disabled = false; button.textContent = 'إنشاء القسيمة'; }
+  }
+}
+
 async function lookupCoupon(rawCode) {
   const code = String(rawCode || '').trim();
   if (!code) {
@@ -154,10 +285,13 @@ async function lookupCoupon(rawCode) {
   resultPanel.hidden = true;
   try {
     const response = await request('/api/admin/coupons/lookup?code=' + encodeURIComponent(code));
-    renderCoupon(response.coupon, response.redeemable
-      ? 'القسيمة صالحة. لا يتم تسجيل الصرف إلا بعد التأكيد.'
-      : 'القسيمة مستخدمة بالفعل.');
-    setCameraStatus(response.redeemable ? 'تم العثور على قسيمة صالحة.' : 'القسيمة سبق صرفها.', response.redeemable ? 'success' : 'error');
+    const lookupMessage = response.redeemable
+      ? (response.coupon.couponKind === 'campaign' && Number(response.coupon.minimumOrderAmount || 0) > 0
+        ? 'القسيمة صالحة؛ أدخل إجمالي الطلب وتأكد من الحد الأدنى قبل الصرف.'
+        : 'القسيمة صالحة. لا يتم تسجيل الصرف إلا بعد التأكيد.')
+      : (response.reason === 'expired' ? 'انتهت صلاحية القسيمة.' : response.reason === 'disabled' ? 'القسيمة موقوفة من الإدارة.' : response.reason === 'exhausted' ? 'تم استنفاد مرات استخدام القسيمة.' : 'القسيمة غير متاحة للاستخدام.');
+    renderCoupon({ ...response.coupon, redeemable: response.redeemable }, lookupMessage);
+    setCameraStatus(response.redeemable ? 'تم العثور على قسيمة صالحة.' : lookupMessage, response.redeemable ? 'success' : 'error');
   } catch (error) {
     renderCoupon(null, error.message || 'لم نتمكن من التحقق من القسيمة.');
     setCameraStatus(error.message || 'لم نتمكن من التحقق من القسيمة.', 'error');
@@ -258,19 +392,24 @@ redeemButton?.addEventListener('click', async () => {
   try {
     const response = await request('/api/admin/coupons/redeem', {
       method: 'POST',
-      body: JSON.stringify({ code: currentCoupon.code })
+      body: JSON.stringify({ code: currentCoupon.code, orderTotal: $('#coupon-order-total')?.value || null })
     });
     renderCoupon(response.coupon, 'تم صرف الخصم بنجاح. تم إغلاق القسيمة ولا يمكن استخدامها مرة أخرى.');
     setCameraStatus('نجاح: تم صرف القسيمة وتسجيلها كمستخدمة.', 'success');
     void refreshCouponList();
+    if (currentCoupon?.couponKind === 'campaign' || currentCoupon?.campaignId) void refreshCampaignList();
   } catch (error) {
     setCameraStatus(error.message || 'تعذر تسجيل صرف القسيمة.', 'error');
-    try {
-      const response = await request('/api/admin/coupons/lookup?code=' + encodeURIComponent(currentCoupon.code));
-      renderCoupon(response.coupon, response.redeemable
-        ? 'القسيمة ما زالت صالحة ولم يتم صرفها.'
-        : 'القسيمة تم صرفها بالفعل ولا يمكن استخدامها مرة أخرى.');
-    } catch {}
+    if (error.status === 400) {
+      $('#coupon-result-message').textContent = error.message || 'تحقق من الحد الأدنى للطلب. ';
+    } else {
+      try {
+        const response = await request('/api/admin/coupons/lookup?code=' + encodeURIComponent(currentCoupon.code));
+        renderCoupon({ ...response.coupon, redeemable: response.redeemable }, response.redeemable
+          ? 'القسيمة ما زالت صالحة ولم يتم صرفها.'
+          : 'القسيمة غير متاحة أو تم صرفها بالفعل.');
+      } catch {}
+    }
   } finally {
     redeemButton.disabled = false;
     redeemButton.textContent = 'تأكيد صرف الخصم';
@@ -279,7 +418,13 @@ redeemButton?.addEventListener('click', async () => {
 
 $('#admin-coupons-refresh')?.addEventListener('click', () => void refreshCouponList());
 $('#admin-coupon-filter')?.addEventListener('change', renderCouponHistory);
+$('#coupon-campaign-form')?.addEventListener('submit', event => void createCampaign(event));
+$('#campaign-coupons-refresh')?.addEventListener('click', () => void refreshCampaignList());
+$('#campaign-target-mode')?.addEventListener('change', () => {
+  $('#campaign-customer-phone-row').hidden = $('#campaign-target-mode').value !== 'customer';
+});
 void refreshCouponList();
+void refreshCampaignList();
 
 window.addEventListener('pagehide', stopCamera);
 window.addEventListener('hashchange', () => {
