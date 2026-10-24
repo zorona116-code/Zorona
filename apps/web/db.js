@@ -518,7 +518,7 @@ export async function registerCustomerAccount(name, phone, passwordHash, rawToke
       }
     }
 
-    if (whatsappMarketingConsent === true && account.rows[0].whatsapp_marketing_consent !== true) {
+    if (whatsappMarketingConsent === true) {
       const updated = await client.query(
         'UPDATE customers SET whatsapp_marketing_consent = TRUE, whatsapp_consent_at = now(), whatsapp_unsubscribed_at = NULL, updated_at = now() WHERE id = $1 RETURNING ' + CUSTOMER_ACCOUNT_COLUMNS,
         [account.rows[0].id]
