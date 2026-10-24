@@ -722,6 +722,20 @@ export async function getCustomerAppCouponByCode(code) {
   return mapCustomerAppCoupon(result.rows[0]);
 }
 
+export async function listCustomerAppCoupons(limit = 100) {
+  if (!dbReady) throw accountNotConfiguredError();
+  await ensureSchema();
+  const safeLimit = Math.min(200, Math.max(1, Math.trunc(Number(limit) || 100)));
+  const rows = await getPool().query(
+    CUSTOMER_APP_COUPON_SELECT + ' ORDER BY coupon.issued_at DESC LIMIT $1',
+    [safeLimit]
+  );
+  const counts = await getPool().query(
+    'SELECT COUNT(*)::int AS total, COUNT(*) FILTER (WHERE redeemed_at IS NULL)::int AS available, COUNT(*) FILTER (WHERE redeemed_at IS NOT NULL)::int AS redeemed FROM customer_app_coupons'
+  );
+  const stats = counts.rows[0] || { total: 0, available: 0, redeemed: 0 };
+  return { coupons: rows.rows.map(mapCustomerAppCoupon), stats: { total: Number(stats.total || 0), available: Number(stats.available || 0), redeemed: Number(stats.redeemed || 0) } };
+}
 export async function redeemCustomerAppCoupon(code, redeemedBy = 'admin') {
   if (!dbReady) throw accountNotConfiguredError();
   await ensureSchema();
