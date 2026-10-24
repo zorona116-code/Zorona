@@ -91,6 +91,7 @@
     document.title = language === 'ar' ? 'حسابي — ZORONA' : 'My Account — ZORONA';
     if (accountData) renderAccount(accountData);
     if (couponPayload) renderAccountCoupon(couponPayload);
+    if (campaignCoupons.length) renderCampaignCoupons();
   }
 
   function setMessage(element, message, kind) {
