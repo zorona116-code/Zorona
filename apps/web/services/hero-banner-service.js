@@ -159,9 +159,6 @@ export function createHeroBannerService({
       error.status = 400;
       throw error;
     }
-    if (next.mediaType === 'video' && next.mediaKey && !VIDEO_TYPES.has(String(body.mediaContentType || 'video/mp4'))) {
-      // The actual uploaded content type is validated before issuing its upload URL.
-    }
     banner = next;
     try {
       if (!(await persist(next))) {
