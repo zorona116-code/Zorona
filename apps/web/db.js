@@ -1,5 +1,5 @@
 import pg from 'pg';
-import { createHash } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
 import { logServiceFailure } from './utils/service-error.js';
 import { readJsonWithStatus as readLegacyJsonWithStatus, writeJson as writeLegacyJson, storageReady } from './storage.js';
 
@@ -118,6 +118,17 @@ async function ensureSchema() {
         created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
         PRIMARY KEY (customer_id, product_id)
       );
+
+      CREATE TABLE IF NOT EXISTS customer_app_coupons (
+        id BIGSERIAL PRIMARY KEY,
+        customer_id BIGINT NOT NULL UNIQUE REFERENCES customers(id) ON DELETE CASCADE,
+        code TEXT NOT NULL UNIQUE,
+        discount_percent SMALLINT NOT NULL DEFAULT 10 CHECK (discount_percent BETWEEN 1 AND 100),
+        issued_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+        redeemed_at TIMESTAMPTZ,
+        redeemed_by TEXT
+      );
+      CREATE INDEX IF NOT EXISTS customer_app_coupons_redemption_idx ON customer_app_coupons (redeemed_at, issued_at DESC);
       ALTER TABLE customers ADD COLUMN IF NOT EXISTS password_hash TEXT;
     `).catch((error) => {
       // Allow retrying schema setup on a later call instead of caching a failure forever.
@@ -634,4 +645,80 @@ export async function setCustomerMarketingConsent(customerId, channel, enabled, 
   } finally {
     client.release();
   }
+}
+
+
+function mapCustomerAppCoupon(row) {
+  if (!row) return null;
+  return {
+    id: Number(row.id),
+    code: row.code,
+    discountPercent: Number(row.discountPercent),
+    issuedAt: row.issuedAt,
+    redeemedAt: row.redeemedAt,
+    redeemedBy: row.redeemedBy,
+    customerName: row.customerName,
+    customerPhone: row.customerPhone
+  };
+}
+
+const CUSTOMER_APP_COUPON_SELECT = `
+  SELECT coupon.id, coupon.code, coupon.discount_percent AS "discountPercent",
+         coupon.issued_at AS "issuedAt", coupon.redeemed_at AS "redeemedAt",
+         coupon.redeemed_by AS "redeemedBy", customer.name AS "customerName",
+         customer.phone AS "customerPhone"
+  FROM customer_app_coupons AS coupon
+  JOIN customers AS customer ON customer.id = coupon.customer_id
+`;
+
+export async function getOrCreateCustomerAppCoupon(customerId, discountPercent = 10) {
+  if (!dbReady) throw accountNotConfiguredError();
+  await ensureSchema();
+  const code = randomBytes(24).toString('base64url');
+  const safePercent = Math.min(100, Math.max(1, Math.trunc(Number(discountPercent) || 10)));
+  await getPool().query(
+    'INSERT INTO customer_app_coupons (customer_id, code, discount_percent) VALUES ($1, $2, $3) ON CONFLICT (customer_id) DO NOTHING',
+    [customerId, code, safePercent]
+  );
+  const result = await getPool().query(
+    CUSTOMER_APP_COUPON_SELECT + ' WHERE coupon.customer_id = $1',
+    [customerId]
+  );
+  if (!result.rowCount) throw new Error('Coupon could not be created.');
+  return mapCustomerAppCoupon(result.rows[0]);
+}
+
+export async function getCustomerAppCouponByCode(code) {
+  if (!dbReady) throw accountNotConfiguredError();
+  await ensureSchema();
+  const result = await getPool().query(
+    CUSTOMER_APP_COUPON_SELECT + ' WHERE coupon.code = $1',
+    [code]
+  );
+  return mapCustomerAppCoupon(result.rows[0]);
+}
+
+export async function redeemCustomerAppCoupon(code, redeemedBy = 'admin') {
+  if (!dbReady) throw accountNotConfiguredError();
+  await ensureSchema();
+  const result = await getPool().query(
+    `WITH redeemed AS (
+       UPDATE customer_app_coupons
+       SET redeemed_at = now(), redeemed_by = $2
+       WHERE code = $1 AND redeemed_at IS NULL
+       RETURNING *
+     )
+     SELECT redeemed.id, redeemed.code, redeemed.discount_percent AS "discountPercent",
+            redeemed.issued_at AS "issuedAt", redeemed.redeemed_at AS "redeemedAt",
+            redeemed.redeemed_by AS "redeemedBy", customer.name AS "customerName",
+            customer.phone AS "customerPhone"
+     FROM redeemed
+     JOIN customers AS customer ON customer.id = redeemed.customer_id`,
+    [code, String(redeemedBy || 'admin').trim().slice(0, 80) || 'admin']
+  );
+  if (result.rowCount) return { status: 'redeemed', coupon: mapCustomerAppCoupon(result.rows[0]) };
+  const existing = await getCustomerAppCouponByCode(code);
+  return existing
+    ? { status: 'already_redeemed', coupon: existing }
+    : { status: 'not_found', coupon: null };
 }
