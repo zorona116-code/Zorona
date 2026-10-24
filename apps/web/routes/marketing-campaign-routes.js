@@ -40,6 +40,12 @@ function campaignError(res, error, fallback) {
   });
 }
 
+function couponUnavailable(campaign) {
+  return !campaign.couponEnabled || campaign.couponCustomerId !== null ||
+    (campaign.couponExpiresAt && new Date(campaign.couponExpiresAt).getTime() <= Date.now()) ||
+    (campaign.couponMaxUses !== null && campaign.couponMaxUses !== undefined && campaign.couponUsageCount >= campaign.couponMaxUses);
+}
+
 function firstName(name) {
   const value = String(name || '').trim().replace(/\s+/g, ' ');
   return (value.split(' ')[0] || 'عميلنا').slice(0, 80);
@@ -89,6 +95,7 @@ async function sendWhatsAppTemplate(config, campaign, recipient) {
   if (!response.ok) {
     const providerError = payload?.error || {};
     const error = new Error(String(providerError.message || 'WhatsApp rejected this message.').slice(0, 450));
+    error.status = 502;
     error.code = String(providerError.code || response.status).slice(0, 80);
     throw error;
   }
@@ -155,8 +162,7 @@ export function registerMarketingCampaignRoutes(app, { requireAdminApiKey }) {
       if (campaign.status !== 'draft') {
         return res.status(409).json({ code: 'MARKETING_TEST_ONLY_DRAFT', message: 'الإرسال التجريبي متاح للمسودات فقط.' });
       }
-      if (!campaign.couponEnabled || campaign.couponCustomerId !== null ||
-          (campaign.couponExpiresAt && new Date(campaign.couponExpiresAt).getTime() <= Date.now())) {
+      if (couponUnavailable(campaign)) {
         return res.status(409).json({ code: 'MARKETING_COUPON_UNAVAILABLE', message: 'القسيمة المرتبطة بالحملة ليست عامة ومفعّلة وصالحة.' });
       }
       await sendWhatsAppTemplate(config, campaign, { phone: config.testRecipientPhone, customerName: 'اختبار' });
