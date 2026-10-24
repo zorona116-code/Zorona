@@ -13,6 +13,8 @@ import { createCategoryService } from './services/category-service.js';
 import { registerCategoryRoutes } from './routes/category-routes.js';
 import { createPromotionService } from './services/promotion-service.js';
 import { registerPromotionRoutes } from './routes/promotion-routes.js';
+import { createHeroBannerService } from './services/hero-banner-service.js';
+import { registerHeroBannerRoutes } from './routes/hero-banner-routes.js';
 import { createStateRepository } from './repositories/state-repository.js';
 import { createStateStore } from './repositories/state-store.js';
 import { registerProductRoutes } from './routes/product-routes.js';
@@ -118,6 +120,16 @@ const promotionService=createPromotionService({
   })
 });
 registerPromotionRoutes(app,{service:promotionService,requireAdminApiKey});
+const heroBannerService = createHeroBannerService({
+  readJsonWithStatus,
+  writeJson,
+  storageReady,
+  presign,
+  deleteObject,
+  persistenceReady: dbReady || (!isProductionRuntime && storageReady),
+  allowEphemeral: !isProductionRuntime
+});
+registerHeroBannerRoutes(app, { service: heroBannerService, requireAdminApiKey });
 const categoryService=createCategoryService({categoriesRepository:stateRepository.categories,productsRepository:stateRepository.products,storageReady,dbReady,presign,readJsonWithStatus,writeJson,deleteObject,isAdminApiKeyValid});
 registerCategoryRoutes(app,{service:categoryService,requireAdminApiKey});
 const restoreCategories=categoryService.restore;
@@ -126,6 +138,7 @@ const nextProductId = createNextPrefixedId(stateRepository.products, 'P', 3);
 app.get('/health',async(_req,res)=>{
   const persistence = stateStore.status();
   const promotionPersistence = promotionService.persistenceStatus();
+  const heroBannerPersistence = heroBannerService.persistenceStatus();
   const database = await dbHealthCheck();
   const persistentStoreConfigured = dbReady || (!isProductionRuntime && storageReady);
   const businessStateHealthy = dbReady
@@ -133,7 +146,7 @@ app.get('/health',async(_req,res)=>{
     : persistentStoreConfigured
       ? persistence.restoreStatus !== 'restore_failed' && persistence.lastPersistOk !== false
       : !isProductionRuntime;
-  const ready = businessStateHealthy && promotionPersistence.lastPersistOk !== false;
+  const ready = businessStateHealthy && promotionPersistence.lastPersistOk !== false && heroBannerPersistence.lastPersistOk !== false;
   const payload = {
     ok: ready,
     service: 'arabisk-web',
@@ -144,6 +157,7 @@ app.get('/health',async(_req,res)=>{
     mediaStorageConfigured: storageReady,
     persistence,
     promotionPersistence,
+    heroBannerPersistence,
     environment: isProductionRuntime ? 'production' : 'development'
   };
   return res.status(ready ? 200 : 503).json(payload);
@@ -220,6 +234,7 @@ if (dbReady && storageReady) {
 await stateStore.restore();
 await restoreCategories();
 await promotionService.restore();
+await heroBannerService.restore();
 if(dbReady){
   persistState();
   await flushPersistState();
