@@ -30,19 +30,17 @@ function renderReservations(){const rows=reservations.map(r=>`<tr><td><strong>${
 function customerDate(value){if(!value)return '—';const date=new Date(value);return Number.isNaN(date.getTime())?'—':date.toLocaleDateString('ar-AE');}
 function renderCustomers(){
   const rows=(customers||[]).map(customer=>{
-    const sms=customer.sms_marketing_consent===true;
     const whatsapp=customer.whatsapp_marketing_consent===true;
-    return `<tr>
-      <td><strong>${escapeHtml(customer.name)}</strong><small>عميل منذ ${escapeHtml(customerDate(customer.first_seen_at))}</small></td>
-      <td dir="ltr">${escapeHtml(customer.phone)}</td>
-      <td>${Number(customer.reservation_count||0)}</td>
-      <td><span class="status ${sms?'on':'off'}">${sms?'موافق':'غير موافق'}</span></td>
-      <td><span class="status ${whatsapp?'on':'off'}">${whatsapp?'موافق':'غير موافق'}</span></td>
-      <td>${escapeHtml(customerDate(customer.last_reservation_at))}</td>
-      <td class="actions">${sms?'<button data-customer-unsubscribe="sms" data-id="'+Number(customer.id)+'" class="danger">إيقاف SMS</button>':''}${whatsapp?'<button data-customer-unsubscribe="whatsapp" data-id="'+Number(customer.id)+'" class="danger">إيقاف WhatsApp</button>':''}</td>
-    </tr>`;
+    return \`<tr>
+      <td><strong>\${escapeHtml(customer.name)}</strong><small>عميل منذ \${escapeHtml(customerDate(customer.first_seen_at))}</small></td>
+      <td dir="ltr">\${escapeHtml(customer.phone)}</td>
+      <td>\${Number(customer.reservation_count||0)}</td>
+      <td><span class="status \${whatsapp?'on':'off'}">\${whatsapp?'موافق على واتساب':'غير موافق'}</span></td>
+      <td>\${escapeHtml(customerDate(customer.last_reservation_at))}</td>
+      <td class="actions">\${whatsapp?'<button data-customer-unsubscribe="whatsapp" data-id="'+Number(customer.id)+'" class="danger">إيقاف WhatsApp</button>':''}</td>
+    </tr>\`;
   }).join('');
-  $('#customers-body').innerHTML=rows||'<tr><td colspan="7" class="empty">لا توجد سجلات عملاء في قاعدة البيانات بعد.</td></tr>';
+  $('#customers-body').innerHTML=rows||'<tr><td colspan="6" class="empty">لا توجد سجلات عملاء في قاعدة البيانات بعد.</td></tr>';
   document.querySelectorAll('[data-sidebar-count="customers"]').forEach(node=>node.textContent=(customers||[]).length);
 }
 function openModal(product=null){editingId=product?.id||null;$('#modal-title').textContent=editingId?'تعديل الصنف':'إضافة صنف جديد';$('#name-ar').value=product?.nameAr||'';$('#name-en').value=product?.nameEn||'';$('#price').value=product?.price??'';$('#image-url').value=product?.imageUrl&&!product.imageKey?product.imageUrl:'';$('#description-ar').value=product?.descriptionAr||'';$('#category').innerHTML=categories.map(c=>`<option value="${escapeHtml(c.id)}" ${product?.categoryId===c.id?'selected':''}>${escapeHtml(c.nameAr)}</option>`).join('');$('#available').checked=product?.available??true;$('#video-file').value='';$('#selected-file').textContent='';$('#remove-video').hidden=!product?.videoKey;updateVideoPreview(product?.videoUrl||'');$('#image-file').value='';$('#selected-image').textContent='';$('#remove-image').hidden=!product?.imageKey;updateImagePreview(product?.imageUrl||'');$('#modal').classList.add('show');$('#modal').setAttribute('aria-hidden','false');$('#name-ar').focus();}
