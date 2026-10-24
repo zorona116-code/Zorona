@@ -18,7 +18,7 @@ function whatsappConfig() {
   if (!accessToken) missing.push('WHATSAPP_ACCESS_TOKEN');
   if (!/^\d{5,30}$/.test(phoneNumberId)) missing.push('WHATSAPP_PHONE_NUMBER_ID');
   if (!/^v\d+\.\d+$/.test(graphVersion)) missing.push('WHATSAPP_GRAPH_API_VERSION');
-  return { accessToken, phoneNumberId, graphVersion, testRecipientPhone, testRecipientConfigured: /^\\+[1-9]\\d{7,14}$/.test(testRecipientPhone), missing, configured: missing.length === 0 };
+  return { accessToken, phoneNumberId, graphVersion, testRecipientPhone, testRecipientConfigured: /^\+[1-9]\d{7,14}$/.test(testRecipientPhone), missing, configured: missing.length === 0 };
 }
 
 function publicConfig(config) {
