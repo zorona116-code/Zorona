@@ -1,0 +1,75 @@
+:root{--account-border:#e7dece;--account-panel:#fffaf2;--account-gold:#c59a5b;--account-ink:#211a13;--account-muted:#756d62}
+.account-page{background:#f4efe6;color:var(--account-ink)}
+.account-page .app-header{position:relative;background:#17130f}
+.account-shell{width:min(1120px,calc(100% - 32px));margin:0 auto;padding:26px 0 86px}
+.account-hero{position:relative;overflow:hidden;min-height:240px;padding:44px clamp(22px,5vw,58px);border-radius:26px;background:radial-gradient(circle at 80% 10%,rgba(197,154,91,.23),transparent 35%),linear-gradient(120deg,#241b12,#120f0c);color:#fff}
+.account-eyebrow,.account-kicker{margin:0 0 9px;color:#ae8750;font-size:10px;font-weight:900;letter-spacing:2.5px}
+.account-hero h1{position:relative;z-index:1;margin:0;max-width:700px;font:500 clamp(34px,5.2vw,58px)/1.12 "Playfair Display",Cairo,serif}
+.account-hero>p:last-of-type{position:relative;z-index:1;max-width:520px;margin:16px 0 0;color:#d6cbbd;font-size:13px;line-height:2}
+.account-hero-mark{position:absolute;top:50%;inset-inline-end:7%;transform:translateY(-50%);display:grid;place-items:center;width:150px;height:150px;border:1px solid rgba(230,201,145,.25);border-radius:50%;color:rgba(230,201,145,.18);font:500 96px/.9 "Playfair Display",serif}
+.account-hero-mark:before,.account-hero-mark:after{content:"";position:absolute;inset:12px;border:1px solid rgba(230,201,145,.13);border-radius:50%}
+.account-hero-mark:after{inset:25px;border-style:dashed}
+.account-login-card{width:min(620px,100%);margin:-26px auto 0;position:relative;z-index:2;padding:clamp(22px,4vw,34px);border:1px solid var(--account-border);border-radius:24px;background:var(--account-panel);box-shadow:0 22px 55px rgba(37,27,17,.10)}
+.account-card-heading{display:flex;align-items:center;gap:13px}
+.account-icon{display:grid;place-items:center;flex:0 0 48px;width:48px;height:48px;border-radius:15px;background:#201910;color:#e8cb96;font-size:26px}
+.account-card-heading h2,.account-welcome h2{margin:0;font-size:24px;line-height:1.5}
+.account-card-heading .account-kicker,.account-welcome .account-kicker{margin-bottom:2px}
+.account-muted{margin:10px 0 0;color:var(--account-muted);font-size:12px;line-height:1.9}
+.account-form{display:grid;gap:10px;margin-top:22px}
+.account-form label,.account-profile-form>label:not(.account-consent-toggle){font-size:12px;font-weight:800}
+.account-form input,.account-profile-form>input{width:100%;min-height:48px;padding:10px 14px;border:1px solid #dfd4c3;border-radius:12px;background:#fff;color:#231b12;font:600 14px Cairo,sans-serif;outline:none}
+.account-form input:focus,.account-profile-form>input:focus{border-color:#b58c52;box-shadow:0 0 0 3px rgba(197,154,91,.13)}
+.account-primary{display:inline-flex;align-items:center;justify-content:center;min-height:48px;padding:10px 18px;border:0;border-radius:12px;background:#b78b4c;color:#18120c;font:900 12px Cairo,sans-serif;cursor:pointer;transition:filter .2s,transform .2s}
+.account-primary:hover{filter:brightness(1.04);transform:translateY(-1px)}
+.account-primary:disabled,.account-link-button:disabled{opacity:.55;cursor:not-allowed;transform:none}
+.account-link-button{justify-self:center;border:0;background:none;color:#72562e;font:800 12px Cairo,sans-serif;cursor:pointer}
+.account-code-target{margin:0;color:#6f6250;font-size:12px;direction:ltr;text-align:right}
+.account-message{min-height:20px;margin:14px 0 0;font-size:12px;line-height:1.9;color:var(--account-muted)}
+.account-message.is-success{color:#2b7652}.account-message.is-warning{color:#936722}.account-message.is-error{color:#a33d30}
+.account-privacy-note{display:flex;gap:8px;align-items:flex-start;margin:13px 0 0;padding-top:14px;border-top:1px solid #eee5d7;color:#807363;font-size:10px;line-height:1.9}
+.account-privacy-note span:first-child{color:#b18a52;font-size:17px;line-height:1.4}
+.account-dashboard{display:grid;gap:30px;margin-top:34px}
+.account-welcome{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:23px 26px;border:1px solid var(--account-border);border-radius:21px;background:#fffaf3}
+.account-welcome h2{font-size:25px}.account-welcome strong{color:#8b652f}
+.account-logout{flex:none;padding:9px 15px;border:1px solid #e2d5c2;border-radius:999px;background:#fff;color:#6b5841;font:800 11px Cairo,sans-serif;cursor:pointer}
+.account-stat-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px}
+.account-stat{display:grid;justify-items:start;gap:4px;padding:19px 21px;border:1px solid var(--account-border);border-radius:19px;background:#fffaf3}
+.account-stat-icon{display:grid;place-items:center;width:34px;height:34px;margin-bottom:6px;border-radius:11px;background:#eee3d0;color:#815d30;font-size:18px}
+.account-stat strong{font:600 29px/1.2 "Playfair Display",serif}
+.account-stat>span:last-child{color:#786d5f;font-size:10px}
+.account-section{min-width:0}
+.account-section-heading{display:flex;align-items:end;justify-content:space-between;gap:16px;margin-bottom:16px}
+.account-section-heading h2{margin:0;font:500 clamp(25px,3.5vw,34px)/1.2 "Playfair Display",Cairo,serif}
+.account-section-heading .account-kicker{margin-bottom:5px}
+.account-text-link{color:#886733;font-size:11px;font-weight:900;text-decoration:none;white-space:nowrap}
+.account-text-link:hover{text-decoration:underline}
+.account-reservation-list{display:grid;gap:10px}
+.account-reservation{display:grid;grid-template-columns:64px 1fr auto;align-items:center;gap:15px;padding:14px 16px;border:1px solid var(--account-border);border-radius:18px;background:#fffaf3}
+.account-date-mark{display:grid;justify-items:center;gap:3px;padding:9px 4px;border-radius:13px;background:#211a13;color:#efd5a5}
+.account-date-mark strong{font:600 24px/1 "Playfair Display",serif}
+.account-date-mark small{font-size:9px;color:#e0c69b}
+.account-reservation-details{min-width:0}
+.account-reservation-details h3{margin:0 0 4px;font-size:13px;overflow-wrap:anywhere}
+.account-reservation-details p{margin:0;color:#7b7164;font-size:11px;line-height:1.8}
+.account-reservation-details>small{display:block;margin-top:3px;color:#948779;font-size:10px;overflow-wrap:anywhere}
+.account-status{display:inline-flex;align-items:center;justify-content:center;padding:6px 9px;border-radius:999px;background:#efe5d4;color:#7d602f;font-size:9px;font-weight:900;white-space:nowrap}
+.account-status-confirmed{background:#e4efe5;color:#346e49}.account-status-cancelled{background:#f4e4df;color:#9a4634}
+.account-product-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px}
+.account-product-card{min-width:0;overflow:hidden;border:1px solid var(--account-border);border-radius:19px;background:#fffaf3}
+.account-product-image,.account-product-placeholder{display:block;width:100%;height:150px;object-fit:cover;background:#e7dece}
+.account-product-placeholder{display:grid;place-items:center;color:#b18a52;font:500 52px "Playfair Display",serif;background:radial-gradient(circle,#f6ecdb,#ded0bb)}
+.account-product-body{padding:14px}
+.account-product-body h3{min-height:42px;margin:0 0 4px;font-size:13px;line-height:1.65}
+.account-product-price{margin:0 0 11px;color:#8a6634;font-size:12px;font-weight:900;direction:ltr;text-align:right}
+.account-favorite-button{width:100%;min-height:38px;padding:8px 10px;border:1px solid #d6c3a8;border-radius:10px;background:#fff7e9;color:#7a592d;font:800 10px Cairo,sans-serif;cursor:pointer}
+.account-favorite-button.is-saved{border-color:#33281c;background:#221a12;color:#f2d6a1}
+.account-empty{margin:0;padding:23px;border:1px dashed #d9ccb9;border-radius:16px;color:#8a7b68;font-size:12px;line-height:1.9;text-align:center}
+.account-profile-section{padding:24px;border:1px solid var(--account-border);border-radius:22px;background:#fffaf3}
+.account-profile-form{display:grid;grid-template-columns:1fr;gap:10px;max-width:540px}
+.account-profile-form>label:not(.account-consent-toggle){margin-top:3px}
+.account-consent-toggle{display:flex;gap:9px;align-items:center;margin-top:5px;color:#665b4d;font-size:11px}
+.account-consent-toggle input{width:16px;height:16px;accent-color:#ac8042}
+.account-consent-help{margin:0 0 5px;color:#8b7c69;font-size:10px;line-height:1.9}
+.account-save-profile{width:max-content;min-width:150px}
+@media(max-width:760px){.account-shell{width:min(100% - 22px,620px);padding-top:15px}.account-hero{min-height:210px;padding:32px 23px;border-radius:20px}.account-hero-mark{inset-inline-end:-30px;opacity:.65;transform:translateY(-50%) scale(.75)}.account-hero h1{max-width:86%;font-size:38px}.account-hero>p:last-of-type{max-width:82%;font-size:11px}.account-login-card{padding:22px;margin-top:-19px;border-radius:20px}.account-card-heading h2{font-size:20px}.account-dashboard{gap:24px;margin-top:24px}.account-welcome{align-items:flex-start;padding:18px}.account-welcome h2{font-size:20px}.account-stat-grid{gap:8px}.account-stat{padding:14px 12px;border-radius:15px}.account-stat strong{font-size:24px}.account-stat>span:last-child{font-size:9px}.account-product-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.account-product-image,.account-product-placeholder{height:130px}.account-product-body{padding:11px}.account-product-body h3{font-size:12px}.account-reservation{grid-template-columns:52px 1fr;gap:11px;padding:12px}.account-date-mark strong{font-size:21px}.account-status{grid-column:2;justify-self:start}.account-profile-section{padding:19px}}
+@media(max-width:420px){.account-hero h1{font-size:32px}.account-welcome{flex-direction:column}.account-logout{align-self:flex-start}.account-stat{padding:12px 9px}.account-stat-icon{width:30px;height:30px}.account-stat strong{font-size:21px}.account-section-heading h2{font-size:26px}.account-text-link{font-size:10px}.account-product-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.account-product-image,.account-product-placeholder{height:105px}.account-product-body h3{min-height:38px}}
