@@ -103,6 +103,20 @@ async function ensureSchema() {
       CREATE INDEX IF NOT EXISTS customers_sms_opt_in_idx ON customers (last_seen_at DESC) WHERE sms_marketing_consent = TRUE;
       CREATE INDEX IF NOT EXISTS customers_whatsapp_opt_in_idx ON customers (last_seen_at DESC) WHERE whatsapp_marketing_consent = TRUE;
 
+      INSERT INTO customer_consent_events
+        (customer_id, channel, action, consent_text, consent_language, source)
+      SELECT id, 'sms', 'opt_out',
+             'ZORONA marketing switched to WhatsApp only; SMS marketing consent disabled.',
+             'en', 'whatsapp_only_migration'
+      FROM customers
+      WHERE sms_marketing_consent = TRUE;
+      UPDATE customers
+      SET sms_marketing_consent = FALSE,
+          sms_unsubscribed_at = COALESCE(sms_unsubscribed_at, now()),
+          updated_at = now()
+      WHERE sms_marketing_consent = TRUE;
+
+
       CREATE TABLE IF NOT EXISTS customer_account_sessions (
         token_hash TEXT PRIMARY KEY,
         customer_id BIGINT NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
@@ -463,7 +477,7 @@ function accountNotConfiguredError() {
 const CUSTOMER_ACCOUNT_COLUMNS = 'id, name, phone, sms_marketing_consent, whatsapp_marketing_consent, first_seen_at, last_seen_at, account_created_at';
 
 
-export async function registerCustomerAccount(name, phone, passwordHash, rawToken) {
+export async function registerCustomerAccount(name, phone, passwordHash, rawToken, whatsappMarketingConsent = false, consentLanguage = 'ar') {
   if (!dbReady) throw accountNotConfiguredError();
   await ensureSchema();
   const client = await getPool().connect();
@@ -495,6 +509,23 @@ export async function registerCustomerAccount(name, phone, passwordHash, rawToke
         error.code = 'PHONE_ALREADY_REGISTERED';
         throw error;
       }
+    }
+
+    if (whatsappMarketingConsent === true && account.rows[0].whatsapp_marketing_consent !== true) {
+      const updated = await client.query(
+        'UPDATE customers SET whatsapp_marketing_consent = TRUE, whatsapp_consent_at = now(), whatsapp_unsubscribed_at = NULL, updated_at = now() WHERE id = $1 RETURNING ' + CUSTOMER_ACCOUNT_COLUMNS,
+        [account.rows[0].id]
+      );
+      account = updated;
+      await client.query(
+        'INSERT INTO customer_consent_events (customer_id, channel, action, consent_text, consent_language, source) VALUES ($1, $2, $3, $4, $5, $6)',
+        [
+          account.rows[0].id, 'whatsapp', 'opt_in',
+          CUSTOMER_CONSENT_COPY[consentLanguage === 'en' ? 'en' : 'ar'].whatsapp,
+          consentLanguage === 'en' ? 'en' : 'ar',
+          'pwa_registration'
+        ]
+      );
     }
 
     await client.query(
