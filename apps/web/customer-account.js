@@ -112,8 +112,12 @@
 
   function showLogin(message, kind) {
     dashboard.hidden = true;
-    loginPanel.hidden = false;
-    if (message !== undefined) setMessage(loginMessage, message, kind);
+    if (loginPanel) loginPanel.hidden = true;
+    const notice = $('#account-app-only-notice');
+    if (notice) notice.hidden = false;
+    if (message && message !== t('loading') && message !== t('signInRequired') && loginMessage) {
+      setMessage(loginMessage, message, kind || 'error');
+    }
   }
 
   function showOtpNotConfigured() {
@@ -229,7 +233,9 @@
 
   function renderAccount(data) {
     accountData = data;
-    loginPanel.hidden = true;
+    if (loginPanel) loginPanel.hidden = true;
+    const notice = $('#account-app-only-notice');
+    if (notice) notice.hidden = true;
     dashboard.hidden = false;
     $('#customer-name-heading').textContent = data.customer?.name || 'ZORONA';
     $('#customer-phone-heading').textContent = data.customer?.phone || '';
@@ -255,43 +261,6 @@
     }
   }
 
-
-  async function submitAuth(form, endpoint, body, buttonText) {
-    const button = form.querySelector('button[type="submit"]');
-    button.disabled = true;
-    setMessage(loginMessage, '', '');
-    try {
-      await api(endpoint, { method: 'POST', body });
-      form.reset();
-      await refreshAccount();
-    } catch (error) {
-      setMessage(loginMessage, error.message || t('error'), 'error');
-    } finally {
-      button.disabled = false;
-      button.textContent = buttonText;
-    }
-  }
-
-  $('#account-register-form').addEventListener('submit', async event => {
-    event.preventDefault();
-    const form = event.currentTarget;
-    const buttonText = form.querySelector('button[type="submit"]').textContent;
-    await submitAuth(form, '/api/account/register', {
-      name: $('#register-name').value.trim(),
-      phone: $('#register-phone').value.trim(),
-      password: $('#register-password').value
-    }, buttonText);
-  });
-
-  $('#account-login-form').addEventListener('submit', async event => {
-    event.preventDefault();
-    const form = event.currentTarget;
-    const buttonText = form.querySelector('button[type="submit"]').textContent;
-    await submitAuth(form, '/api/account/login', {
-      phone: $('#login-phone').value.trim(),
-      password: $('#login-password').value
-    }, buttonText);
-  });
 
   $('#account-logout').addEventListener('click', async () => {
     try { await api('/api/account/logout', { method: 'POST', body: {} }); } catch {}
@@ -372,6 +341,6 @@
 
   window.addEventListener('arabisk:language-updated', applyLanguage);
   applyLanguage();
-  showLogin(t('loading'));
+  showLogin();
   void refreshAccount();
 })();
