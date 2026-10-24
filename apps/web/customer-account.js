@@ -25,10 +25,10 @@
       favoritesEmpty: 'لسه ما أضفتش أصناف للمفضلة. اختار من القائمة بالأسفل.',
       discoverMore: 'اكتشف المزيد', suggestionsTitle: 'أصناف من المنيو',
       catalogEmpty: 'لا توجد أصناف متاحة للعرض حاليًا.', yourDetails: 'تفاصيلك',
-      profileTitle: 'بيانات الحساب', nameLabel: 'الاسم', smsPreference: 'موافقة رسائل SMS التسويقية',
-      whatsappPreference: 'موافقة WhatsApp التسويقية',
-      consentHelp: 'إدارة الموافقات من هنا ستتوفر في خطوة لاحقة. يمكنك طلب إيقاف الرسائل من فريق ZORONA في أي وقت.',
-      saveProfile: 'حفظ الاسم', addFavorite: 'أضف للمفضلة', removeFavorite: 'إزالة من المفضلة',
+      profileTitle: 'بيانات الحساب', nameLabel: 'الاسم', smsPreference: 'أوافق على تلقي رسائل SMS تسويقية من ZORONA. الموافقة اختيارية ويمكن إلغاؤها في أي وقت.',
+      whatsappPreference: 'أوافق على تلقي عروض تسويقية من ZORONA عبر WhatsApp. الموافقة اختيارية ويمكن إلغاؤها في أي وقت.',
+      consentHelp: 'كل قناة اختيارية ومستقلة. لن تتغير تفضيلاتك إلا بعد الضغط على حفظ التفضيلات.',
+      saveProfile: 'حفظ الاسم', savePreferences: 'حفظ تفضيلات الرسائل', addFavorite: 'أضف للمفضلة', removeFavorite: 'إزالة من المفضلة',
       noReservations: 'ما عندكش حجوزات مسجلة حتى الآن.', reservation: 'حجز', guests: 'أشخاص',
       pending: 'قيد المراجعة', confirmed: 'مؤكد', cancelled: 'ملغي',
       otpNotConfigured: 'صفحة الحساب جاهزة، لكن تسجيل الدخول لم يُفعّل بعد. يلزم إعداد خدمة Twilio Verify لإرسال كود الهاتف.',
@@ -55,10 +55,10 @@
       favoritesEmpty: 'You have not saved any dishes yet. Choose from the menu below.',
       discoverMore: 'Discover more', suggestionsTitle: 'From the menu',
       catalogEmpty: 'No dishes are available right now.', yourDetails: 'Your details',
-      profileTitle: 'Account profile', nameLabel: 'Name', smsPreference: 'Marketing SMS consent',
-      whatsappPreference: 'Marketing WhatsApp consent',
-      consentHelp: 'Consent management will be available here in a later step. You can ask ZORONA to stop messages at any time.',
-      saveProfile: 'Save name', addFavorite: 'Add to favourites', removeFavorite: 'Remove favourite',
+      profileTitle: 'Account profile', nameLabel: 'Name', smsPreference: 'I agree to receive marketing SMS from ZORONA. This is optional and can be withdrawn at any time.',
+      whatsappPreference: 'I agree to receive marketing offers from ZORONA through WhatsApp. This is optional and can be withdrawn at any time.',
+      consentHelp: 'Each channel is optional and independent. Preferences change only after you save them.',
+      saveProfile: 'Save name', savePreferences: 'Save messaging preferences', addFavorite: 'Add to favourites', removeFavorite: 'Remove favourite',
       noReservations: 'You do not have any reservations yet.', reservation: 'Reservation', guests: 'guests',
       pending: 'Pending', confirmed: 'Confirmed', cancelled: 'Cancelled',
       otpNotConfigured: 'Your account page is ready, but phone sign-in is not enabled yet. Configure Twilio Verify to send phone codes.',
@@ -334,6 +334,32 @@
     } finally {
       button.disabled = false;
       button.textContent = t('saveProfile');
+    }
+  });
+
+  $('#account-consent-form').addEventListener('submit', async event => {
+    event.preventDefault();
+    const button = $('#account-consent-form button[type="submit"]');
+    button.disabled = true;
+    const originalLabel = button.textContent;
+    button.textContent = t('saving');
+    setMessage($('#account-consent-message'), '', '');
+    try {
+      const result = await api('/api/account/marketing-preferences', {
+        method: 'PATCH',
+        body: {
+          sms: $('#account-sms-consent').checked,
+          whatsapp: $('#account-whatsapp-consent').checked,
+          language
+        }
+      });
+      if (accountData) accountData.customer = result.customer;
+      setMessage($('#account-consent-message'), language === 'ar' ? 'تم حفظ تفضيلات الرسائل.' : 'Messaging preferences saved.', 'success');
+    } catch (error) {
+      setMessage($('#account-consent-message'), error.message || t('error'), 'error');
+    } finally {
+      button.disabled = false;
+      button.textContent = originalLabel || t('savePreferences');
     }
   });
 
