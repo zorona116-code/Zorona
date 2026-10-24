@@ -31,14 +31,14 @@ function customerDate(value){if(!value)return '—';const date=new Date(value);r
 function renderCustomers(){
   const rows=(customers||[]).map(customer=>{
     const whatsapp=customer.whatsapp_marketing_consent===true;
-    return \`<tr>
-      <td><strong>\${escapeHtml(customer.name)}</strong><small>عميل منذ \${escapeHtml(customerDate(customer.first_seen_at))}</small></td>
-      <td dir="ltr">\${escapeHtml(customer.phone)}</td>
-      <td>\${Number(customer.reservation_count||0)}</td>
-      <td><span class="status \${whatsapp?'on':'off'}">\${whatsapp?'موافق على واتساب':'غير موافق'}</span></td>
-      <td>\${escapeHtml(customerDate(customer.last_reservation_at))}</td>
-      <td class="actions">\${whatsapp?'<button data-customer-unsubscribe="whatsapp" data-id="'+Number(customer.id)+'" class="danger">إيقاف WhatsApp</button>':''}</td>
-    </tr>\`;
+    return '<tr>' +
+      '<td><strong>'+escapeHtml(customer.name)+'</strong><small>عميل منذ '+escapeHtml(customerDate(customer.first_seen_at))+'</small></td>' +
+      '<td dir="ltr">'+escapeHtml(customer.phone)+'</td>' +
+      '<td>'+Number(customer.reservation_count||0)+'</td>' +
+      '<td><span class="status '+(whatsapp?'on':'off')+'">'+(whatsapp?'موافق على واتساب':'غير موافق')+'</span></td>' +
+      '<td>'+escapeHtml(customerDate(customer.last_reservation_at))+'</td>' +
+      '<td class="actions">'+(whatsapp?'<button data-customer-unsubscribe="whatsapp" data-id="'+Number(customer.id)+'" class="danger">إيقاف WhatsApp</button>':'')+'</td>' +
+      '</tr>';
   }).join('');
   $('#customers-body').innerHTML=rows||'<tr><td colspan="6" class="empty">لا توجد سجلات عملاء في قاعدة البيانات بعد.</td></tr>';
   document.querySelectorAll('[data-sidebar-count="customers"]').forEach(node=>node.textContent=(customers||[]).length);
