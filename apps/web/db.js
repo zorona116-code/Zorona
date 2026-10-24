@@ -67,6 +67,7 @@ async function ensureSchema() {
         name TEXT NOT NULL,
         phone TEXT NOT NULL UNIQUE,
         password_hash TEXT,
+        account_created_at TIMESTAMPTZ,
         reservation_count INTEGER NOT NULL DEFAULT 0,
         sms_marketing_consent BOOLEAN NOT NULL DEFAULT FALSE,
         whatsapp_marketing_consent BOOLEAN NOT NULL DEFAULT FALSE,
@@ -130,6 +131,8 @@ async function ensureSchema() {
       );
       CREATE INDEX IF NOT EXISTS customer_app_coupons_redemption_idx ON customer_app_coupons (redeemed_at, issued_at DESC);
       ALTER TABLE customers ADD COLUMN IF NOT EXISTS password_hash TEXT;
+      ALTER TABLE customers ADD COLUMN IF NOT EXISTS account_created_at TIMESTAMPTZ;
+      UPDATE customers SET account_created_at = created_at WHERE password_hash IS NOT NULL AND account_created_at IS NULL;
     `).catch((error) => {
       // Allow retrying schema setup on a later call instead of caching a failure forever.
       schemaPromise = null;
@@ -429,7 +432,7 @@ function accountNotConfiguredError() {
   return error;
 }
 
-const CUSTOMER_ACCOUNT_COLUMNS = 'id, name, phone, sms_marketing_consent, whatsapp_marketing_consent, first_seen_at, last_seen_at';
+const CUSTOMER_ACCOUNT_COLUMNS = 'id, name, phone, sms_marketing_consent, whatsapp_marketing_consent, first_seen_at, last_seen_at, account_created_at';
 
 
 export async function registerCustomerAccount(name, phone, passwordHash, rawToken) {
@@ -438,21 +441,40 @@ export async function registerCustomerAccount(name, phone, passwordHash, rawToke
   const client = await getPool().connect();
   try {
     await client.query('BEGIN');
-    const created = await client.query(
-      "INSERT INTO customers (name, phone, password_hash, first_seen_at, last_seen_at, updated_at) VALUES ($1,$2,$3,now(),now(),now()) ON CONFLICT (phone) DO NOTHING RETURNING " + CUSTOMER_ACCOUNT_COLUMNS,
+    let account = await client.query(
+      "INSERT INTO customers (name, phone, password_hash, account_created_at, first_seen_at, last_seen_at, updated_at) VALUES ($1,$2,$3,now(),now(),now(),now()) ON CONFLICT (phone) DO NOTHING RETURNING " + CUSTOMER_ACCOUNT_COLUMNS,
       [name, phone, passwordHash]
     );
-    if (!created.rowCount) {
-      const error = new Error('PHONE_ALREADY_REGISTERED');
-      error.code = 'PHONE_ALREADY_REGISTERED';
-      throw error;
+
+    // Existing reservation customers can create a login, but old bookings stay hidden
+    // because their account_created_at is set only when the password is created.
+    if (!account.rowCount) {
+      const existing = await client.query(
+        'SELECT id, password_hash FROM customers WHERE phone = $1 FOR UPDATE',
+        [phone]
+      );
+      if (!existing.rowCount || existing.rows[0].password_hash) {
+        const error = new Error('PHONE_ALREADY_REGISTERED');
+        error.code = 'PHONE_ALREADY_REGISTERED';
+        throw error;
+      }
+      account = await client.query(
+        "UPDATE customers SET name = $2, password_hash = $3, account_created_at = now(), last_seen_at = now(), updated_at = now() WHERE id = $1 AND password_hash IS NULL RETURNING " + CUSTOMER_ACCOUNT_COLUMNS,
+        [existing.rows[0].id, name, passwordHash]
+      );
+      if (!account.rowCount) {
+        const error = new Error('PHONE_ALREADY_REGISTERED');
+        error.code = 'PHONE_ALREADY_REGISTERED';
+        throw error;
+      }
     }
+
     await client.query(
       "INSERT INTO customer_account_sessions (token_hash, customer_id, expires_at) VALUES ($1,$2,now() + interval '14 days')",
-      [hashCustomerSessionToken(rawToken), created.rows[0].id]
+      [hashCustomerSessionToken(rawToken), account.rows[0].id]
     );
     await client.query('COMMIT');
-    return created.rows[0];
+    return account.rows[0];
   } catch (error) {
     try { await client.query('ROLLBACK'); } catch {}
     throw error;
