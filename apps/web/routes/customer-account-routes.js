@@ -130,7 +130,7 @@ export function registerCustomerAccountRoutes(app, {
       });
     }
     const phone = normalizePhone(req.body?.phone);
-    if (!/^+[1-9]\d{7,14}$/.test(phone)) {
+    if (!/^\+[1-9]\d{7,14}$/.test(phone)) {
       return res.status(400).json({ code: 'INVALID_PHONE', message: 'اكتب رقم هاتف صحيحًا مع مفتاح الدولة.' });
     }
 
@@ -160,7 +160,7 @@ export function registerCustomerAccountRoutes(app, {
     }
     const phone = normalizePhone(req.body?.phone);
     const code = String(req.body?.code || '').trim();
-    if (!/^+[1-9]\d{7,14}$/.test(phone) || !/^\d{4,10}$/.test(code)) {
+    if (!/^\+[1-9]\d{7,14}$/.test(phone) || !/^\d{4,10}$/.test(code)) {
       return res.status(400).json({ code: 'INVALID_VERIFICATION_INPUT', message: 'تأكد من رقم الهاتف وكود التحقق.' });
     }
 
