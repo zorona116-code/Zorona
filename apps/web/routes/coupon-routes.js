@@ -29,8 +29,7 @@ function presentCoupon(coupon) {
 }
 
 function readConfiguredDiscount() {
-  const value = Number.parseInt(process.env.ZORONA_APP_COUPON_PERCENT || '10', 10);
-  return Number.isInteger(value) && value >= 1 && value <= 100 ? value : 10;
+  return 20;
 }
 
 export function registerCouponRoutes(app, { requireAdminApiKey }) {
