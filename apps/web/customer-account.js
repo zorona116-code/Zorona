@@ -7,6 +7,8 @@
   const loginMessage = $('#account-login-message');
   let pendingPhone = '';
   let accountData = null;
+  let couponPayload = null;
+  let couponRequest = null;
   let language = localStorage.getItem('ARABISK_LANG') === 'en' ? 'en' : 'ar';
 
   const strings = {
@@ -38,6 +40,7 @@
       enterCode: 'أدخل الكود الذي وصلك على الهاتف.',
       signInRequired: 'سجّل الدخول لعرض الحجوزات والمفضلة الخاصة بك.',
       otpSent: 'إذا كان الرقم قادرًا على استقبال الرسائل، فسيصلك كود التحقق.',
+      couponKicker: 'امتياز خاص بحسابك', couponTitle: 'قسيمة خصمك', couponDescription: 'قسيمتك محفوظة في حسابك، وهتفضل موجودة حتى لو خرجت ورجعت تسجّل دخول.', couponLoading: 'جارٍ تحميل قسيمتك…', couponRetry: 'إعادة تحميل القسيمة', couponCode: 'كود القسيمة', couponAvailable: 'صالحة للاستخدام', couponUsed: 'تم استخدام القسيمة', couponUseNote: 'اعرض رمز QR للموظف عند طلبك. القسيمة صالحة مرة واحدة فقط.', couponUsedNote: 'تم صرف هذه القسيمة بالفعل، ولا يمكن استخدامها مرة أخرى.', couponLoadError: 'تعذر تحميل القسيمة. حاول مرة أخرى.', couponIssued: 'تاريخ الإصدار', couponQrAlt: 'رمز QR لقسيمة الخصم',
       saving: 'جارٍ الحفظ…', pricePrefix: 'د.إ'
     },
     en: {
@@ -68,6 +71,7 @@
       enterCode: 'Enter the code sent to your phone.',
       signInRequired: 'Sign in to see your private reservations and favourites.',
       otpSent: 'If this number can receive messages, a verification code will arrive shortly.',
+      couponKicker: 'A benefit for your account', couponTitle: 'Your discount coupon', couponDescription: 'Your coupon is saved to your account and will still be here when you sign in again.', couponLoading: 'Loading your coupon…', couponRetry: 'Reload coupon', couponCode: 'Coupon code', couponAvailable: 'Ready to use', couponUsed: 'Coupon redeemed', couponUseNote: 'Show this QR code to staff when ordering. This coupon can be used once only.', couponUsedNote: 'This coupon has already been redeemed and cannot be used again.', couponLoadError: 'Could not load your coupon. Please try again.', couponIssued: 'Issued', couponQrAlt: 'Discount coupon QR code',
       saving: 'Saving…', pricePrefix: 'AED'
     }
   };
@@ -84,6 +88,7 @@
     });
     document.title = language === 'ar' ? 'حسابي — ZORONA' : 'My Account — ZORONA';
     if (accountData) renderAccount(accountData);
+    if (couponPayload) renderAccountCoupon(couponPayload);
   }
 
   function setMessage(element, message, kind) {
@@ -231,6 +236,56 @@
     $('#favorite-count').textContent = String((accountData.favorites || []).length);
   }
 
+
+  function renderAccountCoupon(payload) {
+    const coupon = payload?.coupon;
+    if (!coupon) return;
+    const used = Boolean(coupon.redeemedAt);
+    const status = $('#account-coupon-status');
+    const qrWrap = $('#account-coupon-qr-wrap');
+    const qrImage = $('#account-coupon-qr');
+    const retry = $('#account-coupon-retry');
+    $('#account-coupon-discount').textContent = (language === 'ar' ? 'خصم ' : '') + Number(coupon.discountPercent || 20) + '%' + (language === 'en' ? ' discount' : '');
+    $('#account-coupon-code').textContent = coupon.code || '—';
+    status.textContent = t(used ? 'couponUsed' : 'couponAvailable');
+    status.className = 'account-coupon-status' + (used ? ' is-used' : ' is-available');
+    qrImage.alt = t('couponQrAlt');
+    if (!used && payload.qrDataUrl) { qrImage.src = payload.qrDataUrl; qrWrap.hidden = false; }
+    else { qrImage.removeAttribute('src'); qrWrap.hidden = true; }
+    const issued = coupon.issuedAt ? new Date(coupon.issuedAt) : null;
+    $('#account-coupon-issued').textContent = issued && !Number.isNaN(issued.getTime())
+      ? t('couponIssued') + ': ' + issued.toLocaleDateString(language === 'ar' ? 'ar-AE' : 'en-AE', { year: 'numeric', month: 'short', day: 'numeric', timeZone: 'Asia/Dubai' })
+      : '';
+    const message = $('#account-coupon-message');
+    message.textContent = t(used ? 'couponUsedNote' : 'couponUseNote');
+    message.className = 'account-coupon-message' + (used ? ' is-used' : '');
+    retry.hidden = true;
+  }
+
+  async function loadAccountCoupon(force = false) {
+    if (couponPayload && !force) { renderAccountCoupon(couponPayload); return; }
+    if (couponRequest && !force) return couponRequest;
+    $('#account-coupon-status').textContent = t('couponLoading');
+    $('#account-coupon-message').textContent = '';
+    $('#account-coupon-retry').hidden = true;
+    couponRequest = (async () => {
+      try {
+        couponPayload = await api('/api/account/coupon');
+        renderAccountCoupon(couponPayload);
+      } catch (error) {
+        couponPayload = null;
+        $('#account-coupon-status').textContent = t('couponLoadError');
+        $('#account-coupon-status').className = 'account-coupon-status is-used';
+        $('#account-coupon-qr-wrap').hidden = true;
+        $('#account-coupon-message').textContent = error.message || t('couponLoadError');
+        $('#account-coupon-message').className = 'account-coupon-message is-used';
+        $('#account-coupon-retry').hidden = false;
+      } finally {
+        couponRequest = null;
+      }
+    })();
+    return couponRequest;
+  }
   function renderAccount(data) {
     accountData = data;
     if (loginPanel) loginPanel.hidden = true;
@@ -248,6 +303,7 @@
     $('#total-booking-count').textContent = String((data.reservations || []).length);
     renderReservations(data.reservations || []);
     renderProducts();
+    void loadAccountCoupon();
   }
 
   async function refreshAccount() {
@@ -265,6 +321,9 @@
   $('#account-logout').addEventListener('click', async () => {
     try { await api('/api/account/logout', { method: 'POST', body: {} }); } catch {}
     accountData = null;
+    couponPayload = null;
+    $('#account-coupon-qr-wrap').hidden = true;
+    $('#account-coupon-code').textContent = '—';
     showLogin(t('signedOut'), 'success');
   });
 
@@ -333,6 +392,8 @@
       button.disabled = false;
     }
   }
+
+  $('#account-coupon-retry')?.addEventListener('click', () => void loadAccountCoupon(true));
 
   document.addEventListener('click', event => {
     const button = event.target.closest('[data-favorite-id]');
