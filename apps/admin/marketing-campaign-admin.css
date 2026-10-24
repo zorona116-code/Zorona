@@ -1,0 +1,36 @@
+.marketing-status-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:16px 0}
+.marketing-status-grid article{display:grid;gap:7px;padding:17px 19px;border:1px solid var(--line);border-radius:14px;background:linear-gradient(135deg,#fffdf8,#f8f4eb)}
+.marketing-status-grid article span{font-size:11px;color:var(--muted);font-weight:700}
+.marketing-status-grid article strong{font:800 22px Cairo,sans-serif;color:var(--ink)}
+.marketing-status-grid .marketing-config-ready{color:var(--success)}
+.marketing-status-grid .marketing-config-missing{font-size:15px;color:var(--danger)}
+.marketing-notice{margin:12px 0 20px;padding:13px 15px;border:1px solid #ead9b5;border-radius:12px;background:#fff5df;color:#795b28;font-size:12px;line-height:1.9}
+.marketing-notice.is-ready{border-color:#cce2d1;background:#eef8f0;color:#2f6b44}
+.marketing-notice.is-warning{border-color:#ead9b5;background:#fff5df;color:#795b28}
+.marketing-create-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(280px,.85fr);gap:15px;align-items:start}
+.marketing-create-card,.marketing-preview-card{min-width:0;padding:21px;border:1px solid var(--line);border-radius:16px;background:var(--surface)}
+.marketing-create-card h3,.marketing-preview-card h3,.marketing-history h3{margin:0 0 7px;font-size:17px}
+.marketing-create-card>p,.marketing-preview-card>p,.marketing-history .coupon-management-header p{margin:0 0 16px;color:var(--muted);font-size:11px;line-height:1.9}
+.marketing-form{display:grid;gap:13px}
+.marketing-form label{display:grid;gap:6px;font-size:11px;font-weight:800;color:#45413a}
+.marketing-form input,.marketing-form select{width:100%;min-width:0;min-height:43px;padding:9px 11px;border:1px solid #ded6c8;border-radius:10px;background:#fff;color:#231f19;font:600 12px Cairo,sans-serif;outline:none}
+.marketing-form input:focus,.marketing-form select:focus{border-color:#b89455;box-shadow:0 0 0 3px #b894551b}
+.marketing-form small{font-weight:500;color:var(--muted);font-size:10px;line-height:1.7}
+.marketing-form-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
+.marketing-preview-kicker{margin-bottom:10px;color:var(--gold-dark);font-size:9px;font-weight:900;letter-spacing:1.4px}
+.marketing-preview-message{padding:17px;border:1px solid #d7ccb8;border-radius:12px;background:#f4f0e7;color:#2c281f;line-height:1.9;font-size:13px}
+.marketing-preview-message p{margin:0 0 10px}
+.marketing-preview-message p:last-child{margin-bottom:0}
+.marketing-preview-message strong{color:#805d2f}
+.marketing-preview-help{margin-top:12px!important;margin-bottom:0!important;font-size:10px!important}
+.marketing-history{margin-top:25px}
+.marketing-history .coupon-management-header{align-items:center;gap:12px}
+.marketing-history .coupon-management-header>span{font-size:11px;color:var(--muted)}
+.marketing-history table{min-width:900px}
+.marketing-history td small{display:block;margin-top:3px;color:var(--muted);font-size:10px}
+.marketing-history td code{font-size:10px;overflow-wrap:anywhere}
+.marketing-send-button{white-space:nowrap}
+.marketing-no-action{color:#aaa}
+.marketing-footnote{margin:16px 0 0;color:var(--muted);font-size:10px;line-height:1.9}
+@media(max-width:900px){.marketing-create-layout{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:620px){.marketing-status-grid{grid-template-columns:minmax(0,1fr)}.marketing-create-card,.marketing-preview-card{padding:15px}.marketing-form-grid{grid-template-columns:minmax(0,1fr)}.marketing-history .coupon-management-header{align-items:flex-start;flex-direction:column}.marketing-status-grid article{padding:13px 15px}}
