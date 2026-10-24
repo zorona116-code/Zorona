@@ -20,6 +20,7 @@ import { createSmartMenuService } from './services/smart-menu-service.js';
 import { createReservationService } from './services/reservation-service.js';
 import { registerReservationRoutes } from './routes/reservation-routes.js';
 import { registerCustomerRoutes } from './routes/customer-routes.js';
+import { registerCustomerAccountRoutes } from './routes/customer-account-routes.js';
 import { createRateLimiter } from './middleware/rate-limit.js';
 import { configureHttpSecurity } from './middleware/http-security.js';
 import { createNextPrefixedId } from './utils/id-generator.js';
@@ -40,7 +41,23 @@ const reservationRateLimit=createRateLimiter({
   limit:8,
   message:'Too many reservation requests. Please try again later.'
 });
-const rateLimiters=[reservationRateLimit];
+const accountOtpStartRateLimit=createRateLimiter({
+  windowMs:15*60*1000,
+  limit:5,
+  message:'Too many account sign-in attempts. Please wait before trying again.'
+});
+const accountOtpPhoneRateLimit=createRateLimiter({
+  windowMs:15*60*1000,
+  limit:3,
+  message:'Too many verification codes requested for this phone. Please wait.',
+  keyResolver:(req)=>'phone:'+String(req.body?.phone||'').replace(/\\D/g,'').slice(-15)
+});
+const accountOtpVerifyRateLimit=createRateLimiter({
+  windowMs:15*60*1000,
+  limit:10,
+  message:'Too many verification attempts. Please wait before trying again.'
+});
+const rateLimiters=[reservationRateLimit,accountOtpStartRateLimit,accountOtpPhoneRateLimit,accountOtpVerifyRateLimit];
 const rateLimitCleanupTimer=setInterval(() => {
   for (const limiter of rateLimiters) limiter.cleanup();
 }, 10*60*1000);
@@ -139,6 +156,13 @@ registerReservationRoutes(app, {
   reservationRateLimit
 });
 registerCustomerRoutes(app, { requireAdminApiKey });
+registerCustomerAccountRoutes(app, {
+  reservations: stateRepository.reservations,
+  products: stateRepository.products,
+  otpStartRateLimit: accountOtpStartRateLimit,
+  otpPhoneRateLimit: accountOtpPhoneRateLimit,
+  otpVerifyRateLimit: accountOtpVerifyRateLimit
+});
 
 const mediaService = createMediaService({
   repository: stateRepository.products,
