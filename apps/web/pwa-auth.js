@@ -14,6 +14,12 @@
   const couponCode = document.getElementById('pwa-coupon-code');
   const campaignSection = document.getElementById('pwa-campaign-coupons');
   const campaignList = document.getElementById('pwa-campaign-coupons-list');
+  const whatsappConsent = document.getElementById('pwa-register-whatsapp-consent');
+  const notificationOverlay = document.getElementById('pwa-notification-overlay');
+  const notificationAllow = document.getElementById('pwa-notification-allow');
+  const notificationDeny = document.getElementById('pwa-notification-deny');
+  const notificationStatus = document.getElementById('pwa-notification-status');
+  const notificationChoiceKey = 'ZORONA_NOTIFICATION_PERMISSION_CHOICE_V1';
   const modeButtons = Array.from(document.querySelectorAll('[data-pwa-mode]'));
   if (!overlay || !registerForm || !loginForm || !message) return;
 
@@ -30,6 +36,52 @@
       button.setAttribute('aria-pressed', String(button.dataset.pwaMode === mode));
     });
     setMessage('');
+  }
+
+
+  function finishNotificationPrompt(choice) {
+    try { localStorage.setItem(notificationChoiceKey, choice); } catch {}
+    notificationOverlay?.classList.remove('is-open');
+    notificationOverlay?.setAttribute('aria-hidden', 'true');
+    if (notificationAllow) notificationAllow.disabled = false;
+    if (notificationDeny) notificationDeny.disabled = false;
+  }
+
+  function maybeShowNotificationPrompt() {
+    if (!notificationOverlay || !('Notification' in window)) return;
+    if (Notification.permission !== 'default') return;
+    let previousChoice = '';
+    try { previousChoice = localStorage.getItem(notificationChoiceKey) || ''; } catch {}
+    if (previousChoice) return;
+    notificationOverlay.classList.add('is-open');
+    notificationOverlay.setAttribute('aria-hidden', 'false');
+  }
+
+  async function requestNotificationPermission() {
+    if (!('Notification' in window)) {
+      if (notificationStatus) notificationStatus.textContent = 'هذا المتصفح لا يدعم إشعارات التطبيق.';
+      finishNotificationPrompt('unsupported');
+      return;
+    }
+    if (!window.isSecureContext) {
+      if (notificationStatus) notificationStatus.textContent = 'الإشعارات تحتاج إلى اتصال آمن HTTPS.';
+      finishNotificationPrompt('unsupported');
+      return;
+    }
+
+    if (notificationAllow) notificationAllow.disabled = true;
+    if (notificationDeny) notificationDeny.disabled = true;
+    if (notificationStatus) notificationStatus.textContent = 'جارٍ فتح نافذة إذن الإشعارات…';
+    try {
+      // This must be called directly from the allow-button click for browsers to show permission UI.
+      const permission = Notification.permission === 'default'
+        ? await Notification.requestPermission()
+        : Notification.permission;
+      finishNotificationPrompt(permission === 'granted' ? 'granted' : permission === 'denied' ? 'denied' : 'prompted');
+    } catch {
+      if (notificationStatus) notificationStatus.textContent = 'تعذر طلب الإذن. يمكنك تغييره من إعدادات المتصفح.';
+      finishNotificationPrompt('prompted');
+    }
   }
 
   function closeCoupon() {
@@ -147,7 +199,7 @@
     return payload;
   }
 
-  async function unlockIfSignedIn() {
+  async function unlockIfSignedIn(showRewards = false) {
     try {
       const response = await fetch('/api/account/me', {
         credentials: 'same-origin',
@@ -157,7 +209,7 @@
       if (!response.ok) return false;
       html.classList.add('pwa-authenticated');
       overlay.setAttribute('aria-hidden', 'true');
-      await showCoupon();
+      if (showRewards) await showCoupon();
       return true;
     } catch {
       return false;
@@ -179,7 +231,7 @@
         body: JSON.stringify(body)
       });
       await readJson(response);
-      if (await unlockIfSignedIn()) {
+      if (await unlockIfSignedIn(true)) {
         form.reset();
         return;
       }
@@ -198,6 +250,8 @@
   }
 
   modeButtons.forEach(button => button.addEventListener('click', () => setMode(button.dataset.pwaMode)));
+  notificationAllow?.addEventListener('click', () => { void requestNotificationPermission(); });
+  notificationDeny?.addEventListener('click', () => finishNotificationPrompt('declined'));
   document.getElementById('pwa-coupon-close')?.addEventListener('click', closeCoupon);
   document.getElementById('pwa-coupon-dismiss')?.addEventListener('click', closeCoupon);
   couponOverlay?.addEventListener('click', event => {
@@ -212,7 +266,9 @@
     submitCredentials(registerForm, '/api/account/register', {
       name: document.getElementById('pwa-register-name').value.trim(),
       phone: document.getElementById('pwa-register-phone').value.replace(/[\s().-]/g, ''),
-      password: document.getElementById('pwa-register-password').value
+      password: document.getElementById('pwa-register-password').value,
+      whatsappMarketingConsent: whatsappConsent?.checked === true,
+      consentLanguage: html.lang === 'en' ? 'en' : 'ar'
     }, 'إنشاء الحساب');
   });
 
@@ -225,7 +281,8 @@
   });
 
   setMode('register');
-  unlockIfSignedIn().then(signedIn => {
+  maybeShowNotificationPrompt();
+  unlockIfSignedIn(false).then(signedIn => {
     if (!signedIn) {
       overlay.setAttribute('aria-hidden', 'false');
       document.getElementById('pwa-register-name').focus({ preventScroll: true });
