@@ -1,12 +1,13 @@
-// ZORONA no longer ships an offline app. This worker only exists so that browsers that
-// installed an earlier version clean up its caches and unregister it on their next visit.
-self.addEventListener('install', () => self.skipWaiting());
+// Network-only service worker: enables reliable PWA installation without claiming offline support.
+self.addEventListener('install', event => {
+  event.waitUntil(self.skipWaiting());
+});
+
 self.addEventListener('activate', event => {
-  event.waitUntil((async () => {
-    const keys = await caches.keys();
-    await Promise.all(keys.map(key => caches.delete(key)));
-    await self.registration.unregister();
-    const clients = await self.clients.matchAll({ type: 'window' });
-    for (const client of clients) client.navigate(client.url);
-  })());
+  event.waitUntil(self.clients.claim());
+});
+
+self.addEventListener('fetch', event => {
+  if (event.request.method !== 'GET') return;
+  event.respondWith(fetch(event.request));
 });
