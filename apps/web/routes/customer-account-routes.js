@@ -146,7 +146,7 @@ export function registerCustomerAccountRoutes(app, {
     const phone = normalizePhone(req.body?.phone);
     const password = String(req.body?.password || '');
     if (name.length < 2) return res.status(400).json({ code: 'INVALID_NAME', message: 'اكتب الاسم كاملًا.' });
-    if (!/^\\+[1-9]\\d{7,14}$/.test(phone)) return res.status(400).json({ code: 'INVALID_PHONE', message: 'اكتب رقم الهاتف مع مفتاح الدولة مثل +971.' });
+    if (!/^\+[1-9]\d{7,14}$/.test(phone)) return res.status(400).json({ code: 'INVALID_PHONE', message: 'اكتب رقم الهاتف مع مفتاح الدولة مثل +971.' });
     if (password.length < 8 || password.length > 128) return res.status(400).json({ code: 'INVALID_PASSWORD', message: 'كلمة السر لازم تكون 8 أحرف على الأقل.' });
     try {
       const passwordHash = await hashPassword(password);
@@ -164,7 +164,7 @@ export function registerCustomerAccountRoutes(app, {
     res.setHeader('Cache-Control', 'no-store');
     const phone = normalizePhone(req.body?.phone);
     const password = String(req.body?.password || '');
-    if (!/^\\+[1-9]\\d{7,14}$/.test(phone) || !password || password.length > 128) {
+    if (!/^\+[1-9]\d{7,14}$/.test(phone) || !password || password.length > 128) {
       return res.status(400).json({ code: 'INVALID_LOGIN', message: 'اكتب رقم الهاتف وكلمة السر.' });
     }
     try {
