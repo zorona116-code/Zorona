@@ -1,7 +1,12 @@
-import { randomBytes } from 'node:crypto';
+import { randomBytes, scrypt as scryptCallback, timingSafeEqual } from 'node:crypto';
+import { promisify } from 'node:util';
+const scrypt = promisify(scryptCallback);
 import { normalizePhone } from '../utils/phone.js';
 import {
   createCustomerAccountSession,
+  registerCustomerAccount,
+  getCustomerAccountPasswordHash,
+  createSessionForCustomer,
   getCustomerAccountFromSession,
   listCustomerFavoriteIds,
   revokeCustomerAccountSession,
@@ -112,6 +117,21 @@ function publicReservation(reservation) {
   };
 }
 
+
+async function hashPassword(password) {
+  const salt = randomBytes(16).toString('hex');
+  const derived = await scrypt(password, salt, 64);
+  return salt + ':' + Buffer.from(derived).toString('hex');
+}
+
+async function verifyPassword(password, stored) {
+  const [salt, hash] = String(stored || '').split(':');
+  if (!salt || !hash || !/^[a-f0-9]{32}$/.test(salt) || !/^[a-f0-9]{128}$/.test(hash)) return false;
+  const derived = Buffer.from(await scrypt(password, salt, 64));
+  const expected = Buffer.from(hash, 'hex');
+  return derived.length === expected.length && timingSafeEqual(derived, expected);
+}
+
 export function registerCustomerAccountRoutes(app, {
   reservations,
   products,
@@ -120,6 +140,47 @@ export function registerCustomerAccountRoutes(app, {
   otpVerifyRateLimit
 }) {
   const configured = () => otpConfigured(getTwilioConfig());
+  app.post('/api/account/register', requireSameOrigin, async (req, res) => {
+    res.setHeader('Cache-Control', 'no-store');
+    const name = String(req.body?.name || '').trim().replace(/\\s+/g, ' ').slice(0, 80);
+    const phone = normalizePhone(req.body?.phone);
+    const password = String(req.body?.password || '');
+    if (name.length < 2) return res.status(400).json({ code: 'INVALID_NAME', message: 'اكتب الاسم كاملًا.' });
+    if (!/^\\+[1-9]\\d{7,14}$/.test(phone)) return res.status(400).json({ code: 'INVALID_PHONE', message: 'اكتب رقم الهاتف مع مفتاح الدولة مثل +971.' });
+    if (password.length < 8 || password.length > 128) return res.status(400).json({ code: 'INVALID_PASSWORD', message: 'كلمة السر لازم تكون 8 أحرف على الأقل.' });
+    try {
+      const passwordHash = await hashPassword(password);
+      const token = randomBytes(32).toString('base64url');
+      const customer = await registerCustomerAccount(name, phone, passwordHash, token);
+      setSessionCookie(res, token);
+      return res.status(201).json({ ok: true, customer: publicCustomer(customer) });
+    } catch (error) {
+      if (error.code === 'PHONE_ALREADY_REGISTERED') return res.status(409).json({ code: error.code, message: 'رقم الهاتف مسجل بالفعل. جرّب تسجيل الدخول.' });
+      return res.status(503).json({ code: 'REGISTER_FAILED', message: 'تعذر إنشاء الحساب الآن. تأكد من اتصال الموقع بقاعدة البيانات.' });
+    }
+  });
+
+  app.post('/api/account/login', requireSameOrigin, async (req, res) => {
+    res.setHeader('Cache-Control', 'no-store');
+    const phone = normalizePhone(req.body?.phone);
+    const password = String(req.body?.password || '');
+    if (!/^\\+[1-9]\\d{7,14}$/.test(phone) || !password || password.length > 128) {
+      return res.status(400).json({ code: 'INVALID_LOGIN', message: 'اكتب رقم الهاتف وكلمة السر.' });
+    }
+    try {
+      const account = await getCustomerAccountPasswordHash(phone);
+      const valid = account && await verifyPassword(password, account.password_hash);
+      if (!valid) return res.status(401).json({ code: 'INVALID_CREDENTIALS', message: 'رقم الهاتف أو كلمة السر غير صحيحة.' });
+      const token = randomBytes(32).toString('base64url');
+      const customer = await createSessionForCustomer(account.id, token);
+      setSessionCookie(res, token);
+      return res.json({ ok: true, customer: publicCustomer(customer) });
+    } catch {
+      return res.status(503).json({ code: 'LOGIN_FAILED', message: 'تعذر تسجيل الدخول الآن. حاول مرة أخرى.' });
+    }
+  });
+
+
 
   app.post('/api/account/otp/start', requireSameOrigin, otpStartRateLimit, otpPhoneRateLimit, async (req, res) => {
     res.setHeader('Cache-Control', 'no-store');
