@@ -75,11 +75,33 @@
     }
   }
 
+  function applyDefaultCopy() {
+    const en = language() === 'en';
+    const kicker = $('.app-hero-kicker');
+    const lead = $('.app-hero-lead');
+    const primary = $('.app-primary-cta');
+    const secondary = $('.app-secondary-cta');
+    if (kicker) kicker.textContent = en ? 'ZORONA · LEBANESE & TURKISH CUISINE' : 'ZORONA · مطعم لبناني وتركي';
+    setHeroTitle(en ? 'Lebanese & Turkish flavors' : 'نكهات لبنان وتركيا', en ? 'at one table' : 'على مائدة واحدة');
+    if (lead) lead.textContent = en
+      ? 'From Turkish grills and Lebanese mezze to authentic dishes made for sharing with family and friends.'
+      : 'من المشاوي التركية والمقبلات اللبنانية إلى أطباق أصيلة تجمع العائلة والأصدقاء.';
+    if (primary) {
+      primary.textContent = (en ? 'Explore the Menu' : 'استكشف المنيو') + ' ←';
+      primary.href = '/menu';
+    }
+    if (secondary) {
+      secondary.textContent = (en ? 'Book a Table' : 'احجز طاولتك') + ' ←';
+      secondary.href = '/reservation';
+    }
+  }
+
   function applyBanner() {
     if (!currentBanner) return;
     const banner = currentBanner;
     if (!banner.enabled) {
       clearMedia();
+      applyDefaultCopy();
       return;
     }
     const en = language() === 'en';
