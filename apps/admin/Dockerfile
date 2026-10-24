@@ -3,7 +3,7 @@ FROM node:24-alpine AS build
 WORKDIR /app
 COPY package.json package-lock.json ./
 COPY apps ./apps
-RUN npm ci
+RUN npm install
 RUN npm run build --workspace apps/admin
 
 FROM node:24-alpine AS runtime
