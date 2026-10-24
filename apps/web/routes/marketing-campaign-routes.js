@@ -13,11 +13,12 @@ function whatsappConfig() {
   const accessToken = String(process.env.WHATSAPP_ACCESS_TOKEN || '').trim();
   const phoneNumberId = String(process.env.WHATSAPP_PHONE_NUMBER_ID || '').trim();
   const graphVersion = String(process.env.WHATSAPP_GRAPH_API_VERSION || '').trim();
+  const testRecipientPhone = String(process.env.WHATSAPP_TEST_RECIPIENT_PHONE || '').trim();
   const missing = [];
   if (!accessToken) missing.push('WHATSAPP_ACCESS_TOKEN');
   if (!/^\d{5,30}$/.test(phoneNumberId)) missing.push('WHATSAPP_PHONE_NUMBER_ID');
   if (!/^v\d+\.\d+$/.test(graphVersion)) missing.push('WHATSAPP_GRAPH_API_VERSION');
-  return { accessToken, phoneNumberId, graphVersion, missing, configured: missing.length === 0 };
+  return { accessToken, phoneNumberId, graphVersion, testRecipientPhone, testRecipientConfigured: /^\\+[1-9]\\d{7,14}$/.test(testRecipientPhone), missing, configured: missing.length === 0 };
 }
 
 function publicConfig(config) {
@@ -26,6 +27,7 @@ function publicConfig(config) {
     missing: config.missing,
     endpoint: config.configured ? 'WhatsApp Business Platform Cloud API' : null,
     batchSize: 5,
+    testRecipientConfigured: config.testRecipientConfigured,
     templateRequirements: 'Approved marketing template with exactly five body variables in this order: customer name, offer title, discount percent, coupon code, expiry date.'
   };
 }
@@ -130,6 +132,37 @@ export function registerMarketingCampaignRoutes(app, { requireAdminApiKey }) {
       return res.status(201).json({ ok: true, campaign });
     } catch (error) {
       return campaignError(res, error, 'تعذر حفظ الحملة الآن.');
+    }
+  });
+
+
+  app.post('/api/admin/marketing/campaigns/:id/send-test', requireAdminApiKey, async (req, res) => {
+    res.setHeader('Cache-Control', 'no-store');
+    const id = Number(req.params.id);
+    if (!Number.isSafeInteger(id) || id < 1) {
+      return res.status(400).json({ code: 'INVALID_MARKETING_CAMPAIGN_ID', message: 'رقم الحملة غير صالح.' });
+    }
+    const config = whatsappConfig();
+    if (!config.configured) {
+      return res.status(503).json({ code: 'WHATSAPP_NOT_CONFIGURED', message: 'الإرسال التجريبي غير جاهز حتى تكتمل إعدادات واتساب الرسمية.', missing: config.missing });
+    }
+    if (!config.testRecipientConfigured) {
+      return res.status(503).json({ code: 'WHATSAPP_TEST_RECIPIENT_NOT_CONFIGURED', message: 'أضف رقم الاختبار الذي تملكه أو لديك تصريح صريح باستخدامه في WHATSAPP_TEST_RECIPIENT_PHONE داخل Render.' });
+    }
+    try {
+      const campaign = await getMarketingCampaignById(id);
+      if (!campaign) return res.status(404).json({ code: 'MARKETING_CAMPAIGN_NOT_FOUND', message: 'الحملة غير موجودة.' });
+      if (campaign.status !== 'draft') {
+        return res.status(409).json({ code: 'MARKETING_TEST_ONLY_DRAFT', message: 'الإرسال التجريبي متاح للمسودات فقط.' });
+      }
+      if (!campaign.couponEnabled || campaign.couponCustomerId !== null ||
+          (campaign.couponExpiresAt && new Date(campaign.couponExpiresAt).getTime() <= Date.now())) {
+        return res.status(409).json({ code: 'MARKETING_COUPON_UNAVAILABLE', message: 'القسيمة المرتبطة بالحملة ليست عامة ومفعّلة وصالحة.' });
+      }
+      await sendWhatsAppTemplate(config, campaign, { phone: config.testRecipientPhone, customerName: 'اختبار' });
+      return res.json({ ok: true, message: 'قبلت واجهة واتساب طلب الرسالة التجريبية إلى رقم الاختبار المضبوط في Render.' });
+    } catch (error) {
+      return campaignError(res, error, 'تعذر إرسال الرسالة التجريبية. تحقق من اعتماد القالب ولغته وترتيب المتغيرات.');
     }
   });
 
