@@ -43,7 +43,7 @@ export async function request(path,options={}){
     if(!response.ok){
       if(response.status===401)redirectToLogin();
       const message=response.status===401?'انتهت جلسة لوحة التحكم. جارٍ إعادتك لتسجيل الدخول.':
-        response.status===403?'ليس لديك صلاحية تنفيذ هذا الإجراء.':
+        response.status===403?(data.message||'ليس لديك صلاحية تنفيذ هذا الإجراء.'):
         response.status===429?'تم تجاوز عدد المحاولات المسموح بها. حاول مرة أخرى لاحقًا.':
         data.message||`تعذر تنفيذ الطلب (HTTP ${response.status}).`;
       throw new AdminApiError(message,response.status,responseRequestId);
