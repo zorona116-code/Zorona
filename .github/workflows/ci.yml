@@ -25,7 +25,7 @@ jobs:
           cache: npm
           cache-dependency-path: package-lock.json
       - name: Install dependencies
-        run: npm ci
+        run: npm install
       - name: Verify JavaScript syntax
         run: npm run verify:syntax
       - name: Run tests
