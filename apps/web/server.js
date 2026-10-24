@@ -61,7 +61,12 @@ const accountOtpVerifyRateLimit=createRateLimiter({
   limit:10,
   message:'Too many verification attempts. Please wait before trying again.'
 });
-const rateLimiters=[reservationRateLimit,accountOtpStartRateLimit,accountOtpPhoneRateLimit,accountOtpVerifyRateLimit];
+const pushSubscribeRateLimit=createRateLimiter({
+  windowMs:60*60*1000,
+  limit:10,
+  message:'Too many notification subscription attempts. Please try again later.'
+});
+const rateLimiters=[reservationRateLimit,accountOtpStartRateLimit,accountOtpPhoneRateLimit,accountOtpVerifyRateLimit,pushSubscribeRateLimit];
 const rateLimitCleanupTimer=setInterval(() => {
   for (const limiter of rateLimiters) limiter.cleanup();
 }, 10*60*1000);
@@ -88,7 +93,8 @@ const webPushService = createWebPushService({
 registerPushRoutes(app, {
   pushService: webPushService,
   saveSubscription: saveWebPushSubscription,
-  removeSubscription: deleteWebPushSubscription
+  removeSubscription: deleteWebPushSubscription,
+  subscribeRateLimit: pushSubscribeRateLimit
 });
 
 const smartMenu = createSmartMenuService({
