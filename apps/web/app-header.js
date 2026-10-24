@@ -5,6 +5,15 @@
 
   const $ = selector => document.querySelector(selector);
 
+  function ensureAccountLink() {
+    const nav = $('#app-header-nav');
+    if (!nav || nav.querySelector('a[href="/account"]')) return;
+    const link = document.createElement('a');
+    link.href = '/account';
+    link.textContent = 'حسابي';
+    nav.append(link);
+  }
+
   function markActiveLink() {
     const path = location.pathname.replace(/\/$/, '') || '/';
     document.querySelectorAll('#app-header-nav a').forEach(link => {
@@ -82,6 +91,7 @@
   }
 
   function init() {
+    ensureAccountLink();
     setupHeaderMenu();
     setupLanguageToggle();
     markActiveLink();
