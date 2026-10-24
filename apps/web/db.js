@@ -1027,7 +1027,7 @@ export async function countWhatsAppMarketingRecipients() {
   if (!dbReady) throw accountNotConfiguredError();
   await ensureSchema();
   const result = await getPool().query(
-    "SELECT COUNT(*)::int AS count FROM customers WHERE whatsapp_marketing_consent = TRUE AND phone ~ '^\\\\+[1-9][0-9]{7,14}$'"
+    "SELECT COUNT(*)::int AS count FROM customers WHERE whatsapp_marketing_consent = TRUE AND phone ~ '^\\+[1-9][0-9]{7,14}$'"
   );
   return Number(result.rows[0]?.count || 0);
 }
@@ -1035,7 +1035,7 @@ export async function countWhatsAppMarketingRecipients() {
 export async function createMarketingCampaign(input) {
   if (!dbReady) throw accountNotConfiguredError();
   await ensureSchema();
-  const title = String(input.title || '').trim().replace(/\\s+/g, ' ').slice(0, 100);
+  const title = String(input.title || '').trim().replace(/\s+/g, ' ').slice(0, 100);
   const templateName = String(input.templateName || '').trim();
   const languageCode = String(input.languageCode || 'ar').trim();
   const couponCampaignId = Number(input.couponCampaignId);
@@ -1121,7 +1121,7 @@ export async function prepareMarketingCampaignRecipients(campaignId) {
        SELECT $1, c.id, c.phone, c.name
          FROM customers c
         WHERE c.whatsapp_marketing_consent = TRUE
-          AND c.phone ~ '^\\\\+[1-9][0-9]{7,14}$'
+          AND c.phone ~ '^\\+[1-9][0-9]{7,14}$'
        ON CONFLICT (campaign_id, customer_id) DO NOTHING
        RETURNING id`,
       [campaignId]
@@ -1159,7 +1159,7 @@ export async function claimMarketingCampaignRecipients(campaignId, limit = 10) {
              SELECT 1 FROM customers c
               WHERE c.id = r.customer_id AND c.phone = r.phone
                 AND c.whatsapp_marketing_consent = TRUE
-                AND c.phone ~ '^\\\\+[1-9][0-9]{7,14}$'
+                AND c.phone ~ '^\\+[1-9][0-9]{7,14}$'
            )`,
       [campaignId]
     );
