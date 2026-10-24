@@ -37,18 +37,25 @@
       <span class="account-icon">⌁</span>
       <div><p class="account-kicker" data-i18n="secureAccess">دخول آمن</p><h2 id="login-title" data-i18n="loginTitle">ادخل حسابك برقم الهاتف</h2></div>
     </div>
-    <p class="account-muted" data-i18n="loginLead">هنرسل لك كود تحقق لمرة واحدة للتأكد إن رقم الهاتف يخصك.</p>
-    <form id="account-phone-form" class="account-form">
-      <label for="account-phone" data-i18n="phoneLabel">رقم الهاتف مع مفتاح الدولة</label>
-      <input id="account-phone" name="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="+971 5X XXX XXXX" required maxlength="24">
-      <button class="account-primary" id="send-code" type="submit" data-i18n="sendCode">إرسال كود التحقق</button>
+    <p class="account-muted">سجّل حساب جديد بالاسم ورقم الهاتف وكلمة السر، أو ادخل لحسابك الحالي.</p>
+    <form id="account-register-form" class="account-form">
+      <h3>إنشاء حساب جديد</h3>
+      <label for="register-name">الاسم</label>
+      <input id="register-name" name="name" autocomplete="name" required maxlength="80">
+      <label for="register-phone">رقم الهاتف مع مفتاح الدولة</label>
+      <input id="register-phone" name="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="+971 5X XXX XXXX" required maxlength="24">
+      <label for="register-password">كلمة السر (8 أحرف على الأقل)</label>
+      <input id="register-password" name="password" type="password" autocomplete="new-password" minlength="8" maxlength="128" required>
+      <button class="account-primary" type="submit">إنشاء الحساب</button>
     </form>
-    <form id="account-code-form" class="account-form" hidden>
-      <p class="account-code-target" id="account-code-target"></p>
-      <label for="account-code" data-i18n="codeLabel">كود التحقق</label>
-      <input id="account-code" name="code" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{4,10}" maxlength="10" placeholder="••••••" required>
-      <button class="account-primary" id="verify-code" type="submit" data-i18n="verifyCode">تأكيد الدخول</button>
-      <button class="account-link-button" id="change-phone" type="button" data-i18n="changePhone">تغيير رقم الهاتف</button>
+    <div class="account-form-divider">أو</div>
+    <form id="account-login-form" class="account-form">
+      <h3>تسجيل الدخول</h3>
+      <label for="login-phone">رقم الهاتف مع مفتاح الدولة</label>
+      <input id="login-phone" name="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="+971 5X XXX XXXX" required maxlength="24">
+      <label for="login-password">كلمة السر</label>
+      <input id="login-password" name="password" type="password" autocomplete="current-password" maxlength="128" required>
+      <button class="account-primary" type="submit">دخول</button>
     </form>
     <p id="account-login-message" class="account-message" role="status" aria-live="polite"></p>
     <p class="account-privacy-note"><span aria-hidden="true">♢</span> <span data-i18n="privacyNote">حجوزاتك خاصة بحسابك، ولن تظهر إلا بعد التحقق من رقم هاتفك.</span></p>
