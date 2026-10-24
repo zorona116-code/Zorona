@@ -142,7 +142,7 @@ export function registerCustomerAccountRoutes(app, {
   const configured = () => otpConfigured(getTwilioConfig());
   app.post('/api/account/register', requireSameOrigin, async (req, res) => {
     res.setHeader('Cache-Control', 'no-store');
-    const name = String(req.body?.name || '').trim().replace(/\\s+/g, ' ').slice(0, 80);
+    const name = String(req.body?.name || '').trim().replace(/\s+/g, ' ').slice(0, 80);
     const phone = normalizePhone(req.body?.phone);
     const password = String(req.body?.password || '');
     if (name.length < 2) return res.status(400).json({ code: 'INVALID_NAME', message: 'اكتب الاسم كاملًا.' });
