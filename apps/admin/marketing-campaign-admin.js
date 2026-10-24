@@ -1,7 +1,7 @@
 import { request } from './api-client.js';
 
 const $ = selector => document.querySelector(selector);
-const state = { configured: false, missing: [], audience: null, coupons: [], campaigns: [] };
+const state = { configured: false, testRecipientConfigured: false, missing: [], audience: null, coupons: [], campaigns: [] };
 
 function escapeHtml(value) {
   return String(value ?? '').replace(/[&<>"']/g, character => ({
@@ -36,8 +36,10 @@ function renderConfig() {
   if (state.configured) {
     status.textContent = 'جاهز';
     status.className = 'marketing-config-ready';
-    note.className = 'marketing-notice is-ready';
-    note.textContent = 'اتصال WhatsApp Business Platform مضبوط. الإرسال يتم باستخدام القوالب المعتمدة فقط.';
+    note.className = state.testRecipientConfigured ? 'marketing-notice is-ready' : 'marketing-notice is-warning';
+    note.textContent = state.testRecipientConfigured
+      ? 'اتصال WhatsApp Business Platform مضبوط. الإرسال يتم باستخدام القوالب المعتمدة فقط.'
+      : 'الإرسال الفعلي متاح بعد التأكيد. لاختبار القالب أولًا، اضبط رقم اختبار تملكه أو لديك تصريح صريح باستخدامه في WHATSAPP_TEST_RECIPIENT_PHONE داخل Render.';
   } else {
     status.textContent = 'غير مكتمل';
     status.className = 'marketing-config-missing';
@@ -82,7 +84,7 @@ function renderCampaigns() {
     const canSend = state.configured && campaign.status === 'draft';
     const canContinue = state.configured && campaign.status === 'sending' && Number(campaign.pendingCount) > 0;
     let action = '<span class="marketing-no-action">—</span>';
-    if (canSend) action = '<button type="button" class="small-action marketing-send-button" data-marketing-send="' + Number(campaign.id) + '">إرسال الحملة</button>';
+    if (canSend) action = '<div class="marketing-action-group"><button type="button" class="small-action marketing-test-button" data-marketing-test="' + Number(campaign.id) + '" ' + (state.testRecipientConfigured ? '' : 'disabled title="اضبط رقم الاختبار في Render"') + '>اختبار</button><button type="button" class="small-action marketing-send-button" data-marketing-send="' + Number(campaign.id) + '">إرسال الحملة</button></div>';
     else if (canContinue) action = '<button type="button" class="small-action marketing-send-button" data-marketing-send="' + Number(campaign.id) + '">إرسال الدفعة التالية</button>';
     else if ((campaign.status === 'draft' || campaign.status === 'sending') && !state.configured) {
       action = '<button type="button" class="small-action" disabled title="إعدادات واتساب غير مكتملة">الإرسال غير جاهز</button>';
@@ -110,9 +112,11 @@ async function loadConfigAndAudience() {
   ]);
   if (results[0].status === 'fulfilled') {
     state.configured = results[0].value.configured === true;
+    state.testRecipientConfigured = results[0].value.testRecipientConfigured === true;
     state.missing = Array.isArray(results[0].value.missing) ? results[0].value.missing : [];
   } else {
     state.configured = false;
+    state.testRecipientConfigured = false;
     state.missing = [];
     const note = $('#marketing-config-note');
     if (note) {
@@ -191,6 +195,33 @@ $('#marketing-campaign-form')?.addEventListener('submit', async event => {
 });
 
 $('#marketing-campaigns-body')?.addEventListener('click', async event => {
+  const testButton = event.target.closest('[data-marketing-test]');
+  if (testButton) {
+    const testId = Number(testButton.dataset.marketingTest);
+    const testCampaign = state.campaigns.find(item => Number(item.id) === testId);
+    if (!testCampaign || !state.configured || !state.testRecipientConfigured) {
+      alert('اضبط اتصال واتساب الرسمي ورقم الاختبار في Render أولًا.');
+      return;
+    }
+    if (!confirm('سيتم إرسال رسالة اختبار فعلية إلى رقم الاختبار المضبوط في Render، وليس إلى قائمة العملاء. هل تريد المتابعة؟')) return;
+    testButton.disabled = true;
+    const oldLabel = testButton.textContent;
+    testButton.textContent = 'جارٍ الاختبار…';
+    try {
+      const result = await request('/api/admin/marketing/campaigns/' + testId + '/send-test', {
+        method: 'POST', body: JSON.stringify({})
+      });
+      alert(result.message || 'قبلت واجهة واتساب طلب الاختبار.');
+    } catch (error) {
+      alert(error.message || 'تعذر إرسال الاختبار. تحقق من القالب المعتمد ولغته ومتغيراته.');
+    } finally {
+      if (testButton.isConnected) {
+        testButton.disabled = false;
+        testButton.textContent = oldLabel;
+      }
+    }
+    return;
+  }
   const button = event.target.closest('[data-marketing-send]');
   if (!button) return;
   const id = Number(button.dataset.marketingSend);
