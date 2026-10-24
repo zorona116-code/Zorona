@@ -52,7 +52,7 @@ export function createHeroBannerService({
   function normalize(value = {}) {
     return {
       ...DEFAULTS,
-      enabled: value.enabled !== false,
+      enabled: typeof value.enabled === 'boolean' ? value.enabled : DEFAULTS.enabled,
       mediaType: value.mediaType === 'video' ? 'video' : 'image',
       mediaKey: mediaKey(value.mediaKey),
       posterKey: mediaKey(value.posterKey),
