@@ -452,15 +452,18 @@ export async function createCustomerAccountSession(phone, rawToken) {
 export async function getCustomerAccountFromSession(rawToken) {
   if (!dbReady || !rawToken) return null;
   await ensureSchema();
-  const result = await getPool().query(
-    "UPDATE customer_account_sessions AS s SET last_seen_at = now() " +
-    "FROM customers AS c " +
-    "WHERE s.customer_id = c.id AND s.token_hash = $1 " +
-    "AND s.revoked_at IS NULL AND s.expires_at > now() " +
-    "RETURNING " + CUSTOMER_ACCOUNT_COLUMNS.split(', ').map(column => 'c.' + column).join(', '),
+  const session = await getPool().query(
+    "UPDATE customer_account_sessions SET last_seen_at = now() " +
+    "WHERE token_hash = $1 AND revoked_at IS NULL AND expires_at > now() " +
+    "RETURNING customer_id",
     [hashCustomerSessionToken(rawToken)]
   );
-  return result.rows[0] || null;
+  if (!session.rowCount) return null;
+  const customer = await getPool().query(
+    'SELECT ' + CUSTOMER_ACCOUNT_COLUMNS + ' FROM customers WHERE id = $1',
+    [session.rows[0].customer_id]
+  );
+  return customer.rows[0] || null;
 }
 
 export async function revokeCustomerAccountSession(rawToken) {
