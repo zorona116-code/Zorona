@@ -8,6 +8,7 @@ export function registerPageRoutes(app, { rootDir, distDir }) {
   };
 
   app.get('/privacy', page('privacy.html'));
+  app.get('/account', page('account.html'));
   app.get('/offers', page('offers.html'));
   app.get('/reservation', page('reservation.html'));
   app.get('/menu', page('menu.html'));
