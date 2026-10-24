@@ -74,8 +74,12 @@
       }
       throw new Error('تم إرسال البيانات لكن تعذر تأكيد الدخول. حاول مرة أخرى.');
     } catch (error) {
-      setMessage(error.message || 'تعذر إكمال الطلب. حاول مرة أخرى.');
-      if (error.code === 'PHONE_ALREADY_REGISTERED') setMode('login');
+      if (error.code === 'PHONE_ALREADY_REGISTERED') {
+        setMode('login');
+        setMessage(error.message || 'رقم الهاتف مسجل بالفعل. سجّل الدخول.');
+      } else {
+        setMessage(error.message || 'تعذر إكمال الطلب. حاول مرة أخرى.');
+      }
     } finally {
       button.disabled = false;
       button.textContent = previousLabel || buttonLabel;
