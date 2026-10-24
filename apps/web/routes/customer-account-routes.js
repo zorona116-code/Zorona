@@ -254,8 +254,14 @@ export function registerCustomerAccountRoutes(app, {
       }
 
       const phone = customer.phone;
+      const accountCreatedAt = customer.account_created_at ? new Date(customer.account_created_at).getTime() : 0;
       const customerReservations = reservations.all()
         .filter(item => normalizePhone(item.phone) === phone)
+        .filter(item => {
+          if (!accountCreatedAt) return true;
+          const reservationCreatedAt = new Date(item.createdAt || item.created_at || 0).getTime();
+          return Number.isFinite(reservationCreatedAt) && reservationCreatedAt >= accountCreatedAt;
+        })
         .slice()
         .sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')))
         .map(publicReservation);
