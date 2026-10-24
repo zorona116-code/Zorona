@@ -20,13 +20,13 @@ function isSameOrigin(req) {
   }
 }
 
-export function registerPushRoutes(app, { pushService, saveSubscription, removeSubscription }) {
+export function registerPushRoutes(app, { pushService, saveSubscription, removeSubscription, subscribeRateLimit }) {
   app.get('/api/push/config', (_req, res) => {
     const enabled = pushService.isConfigured();
     return res.json({ enabled, publicKey: enabled ? pushService.publicKey() : '' });
   });
 
-  app.post('/api/push/subscribe', async (req, res) => {
+  app.post('/api/push/subscribe', subscribeRateLimit, async (req, res) => {
     if (!isSameOrigin(req)) return res.status(403).json({ message: 'Cross-origin subscription is not allowed.' });
     if (!pushService.isConfigured()) return res.status(503).json({ message: 'Push notifications are not configured yet.' });
     const value = req.body?.subscription;
