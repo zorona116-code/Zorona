@@ -7,6 +7,11 @@
   const registerForm = document.getElementById('pwa-register-form');
   const loginForm = document.getElementById('pwa-login-form');
   const message = document.getElementById('pwa-auth-message');
+  const couponOverlay = document.getElementById('pwa-coupon-overlay');
+  const couponTitle = document.getElementById('pwa-coupon-title');
+  const couponMessage = document.getElementById('pwa-coupon-message');
+  const couponImage = document.getElementById('pwa-coupon-qr');
+  const couponCode = document.getElementById('pwa-coupon-code');
   const modeButtons = Array.from(document.querySelectorAll('[data-pwa-mode]'));
   if (!overlay || !registerForm || !loginForm || !message) return;
 
@@ -23,6 +28,49 @@
       button.setAttribute('aria-pressed', String(button.dataset.pwaMode === mode));
     });
     setMessage('');
+  }
+
+  function closeCoupon() {
+    couponOverlay?.classList.remove('is-open');
+    couponOverlay?.setAttribute('aria-hidden', 'true');
+  }
+
+  async function showCoupon() {
+    if (!couponOverlay) return;
+    couponOverlay.classList.add('is-open');
+    couponOverlay.setAttribute('aria-hidden', 'false');
+    couponTitle.textContent = 'جارٍ تجهيز قسيمة الخصم…';
+    couponMessage.textContent = 'لحظة من فضلك.';
+    couponImage.hidden = true;
+    couponImage.removeAttribute('src');
+    couponCode.hidden = true;
+    couponCode.textContent = '';
+    try {
+      const response = await fetch('/api/account/coupon', {
+        credentials: 'same-origin',
+        cache: 'no-store',
+        headers: { Accept: 'application/json' }
+      });
+      let payload = {};
+      try { payload = await response.json(); } catch {}
+      if (!response.ok) throw new Error(payload.message || 'تعذر تحميل القسيمة.');
+      const coupon = payload.coupon || {};
+      couponTitle.textContent = coupon.redeemedAt
+        ? 'تم استخدام قسيمتك بالفعل'
+        : 'قسيمة خصم ' + Number(coupon.discountPercent || 10) + '%';
+      couponMessage.textContent = coupon.redeemedAt
+        ? 'هذه القسيمة صُرفت من قبل، ولا يمكن استخدامها مرة أخرى.'
+        : 'اعرض رمز QR للموظف عند الدفع. القسيمة صالحة للاستخدام مرة واحدة.';
+      if (!coupon.redeemedAt && payload.qrDataUrl) {
+        couponImage.src = payload.qrDataUrl;
+        couponImage.hidden = false;
+        couponCode.textContent = coupon.code || '';
+        couponCode.hidden = !coupon.code;
+      }
+    } catch (error) {
+      couponTitle.textContent = 'قسيمة خصم ZORONA';
+      couponMessage.textContent = error.message || 'تعذر تحميل القسيمة الآن. تحقق من اتصال الإنترنت وحاول مرة أخرى.';
+    }
   }
 
   async function readJson(response) {
@@ -47,6 +95,7 @@
       if (!response.ok) return false;
       html.classList.add('pwa-authenticated');
       overlay.setAttribute('aria-hidden', 'true');
+      await showCoupon();
       return true;
     } catch {
       return false;
@@ -87,6 +136,14 @@
   }
 
   modeButtons.forEach(button => button.addEventListener('click', () => setMode(button.dataset.pwaMode)));
+  document.getElementById('pwa-coupon-close')?.addEventListener('click', closeCoupon);
+  document.getElementById('pwa-coupon-dismiss')?.addEventListener('click', closeCoupon);
+  couponOverlay?.addEventListener('click', event => {
+    if (event.target === couponOverlay) closeCoupon();
+  });
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Escape') closeCoupon();
+  });
 
   registerForm.addEventListener('submit', event => {
     event.preventDefault();
