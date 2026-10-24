@@ -124,11 +124,13 @@ async function ensureSchema() {
         id BIGSERIAL PRIMARY KEY,
         customer_id BIGINT NOT NULL UNIQUE REFERENCES customers(id) ON DELETE CASCADE,
         code TEXT NOT NULL UNIQUE,
-        discount_percent SMALLINT NOT NULL DEFAULT 10 CHECK (discount_percent BETWEEN 1 AND 100),
+        discount_percent SMALLINT NOT NULL DEFAULT 20 CHECK (discount_percent BETWEEN 1 AND 100),
         issued_at TIMESTAMPTZ NOT NULL DEFAULT now(),
         redeemed_at TIMESTAMPTZ,
         redeemed_by TEXT
       );
+      ALTER TABLE customer_app_coupons ALTER COLUMN discount_percent SET DEFAULT 20;
+      UPDATE customer_app_coupons SET discount_percent = 20 WHERE redeemed_at IS NULL;
       CREATE INDEX IF NOT EXISTS customer_app_coupons_redemption_idx ON customer_app_coupons (redeemed_at, issued_at DESC);
       ALTER TABLE customers ADD COLUMN IF NOT EXISTS password_hash TEXT;
       ALTER TABLE customers ADD COLUMN IF NOT EXISTS account_created_at TIMESTAMPTZ;
@@ -693,11 +695,11 @@ const CUSTOMER_APP_COUPON_SELECT = `
   JOIN customers AS customer ON customer.id = coupon.customer_id
 `;
 
-export async function getOrCreateCustomerAppCoupon(customerId, discountPercent = 10) {
+export async function getOrCreateCustomerAppCoupon(customerId, discountPercent = 20) {
   if (!dbReady) throw accountNotConfiguredError();
   await ensureSchema();
   const code = randomBytes(24).toString('base64url');
-  const safePercent = Math.min(100, Math.max(1, Math.trunc(Number(discountPercent) || 10)));
+  const safePercent = Math.min(100, Math.max(1, Math.trunc(Number(discountPercent) || 20)));
   await getPool().query(
     'INSERT INTO customer_app_coupons (customer_id, code, discount_percent) VALUES ($1, $2, $3) ON CONFLICT (customer_id) DO NOTHING',
     [customerId, code, safePercent]
