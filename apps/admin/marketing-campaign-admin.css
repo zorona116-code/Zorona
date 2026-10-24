@@ -34,3 +34,5 @@
 .marketing-footnote{margin:16px 0 0;color:var(--muted);font-size:10px;line-height:1.9}
 @media(max-width:900px){.marketing-create-layout{grid-template-columns:minmax(0,1fr)}}
 @media(max-width:620px){.marketing-status-grid{grid-template-columns:minmax(0,1fr)}.marketing-create-card,.marketing-preview-card{padding:15px}.marketing-form-grid{grid-template-columns:minmax(0,1fr)}.marketing-history .coupon-management-header{align-items:flex-start;flex-direction:column}.marketing-status-grid article{padding:13px 15px}}
+
+.marketing-action-group{display:flex;flex-wrap:wrap;gap:6px;align-items:center}.marketing-action-group .small-action{padding-inline:9px;font-size:10px}.marketing-test-button{border-color:#b89455;color:#805d2f}.marketing-action-group button:disabled{opacity:.5;cursor:not-allowed}
