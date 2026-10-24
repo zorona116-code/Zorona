@@ -1,7 +1,11 @@
 export function registerHeroBannerRoutes(app, { service, requireAdminApiKey }) {
-  app.get('/api/hero-banner', (_req, res) => res.json(service.getPublicBanner()));
+  app.get('/api/hero-banner', (_req, res) => {
+    res.set('Cache-Control', 'no-store');
+    return res.json(service.getPublicBanner());
+  });
 
   app.get('/api/admin/hero-banner', requireAdminApiKey, (_req, res) => {
+    res.set('Cache-Control', 'no-store');
     return res.json(service.getAdminBanner());
   });
 
