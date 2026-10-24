@@ -160,9 +160,27 @@ export function registerCouponRoutes(app, { requireAdminApiKey }) {
         return res.json({ ok: true, coupon: { ...presentCoupon(result.coupon), couponKind: 'app' } });
       }
 
+      const campaignForCheck = await getCouponCampaignByCode(code);
+      if (!campaignForCheck) {
+        return res.status(404).json({ code: 'COUPON_NOT_FOUND', message: 'لم يتم العثور على قسيمة بهذا الكود.' });
+      }
+      if (campaignForCheck.customerId) {
+        const ownerPhone = normalizePhone(req.body?.customerPhone);
+        if (ownerPhone !== campaignForCheck.customerPhone) {
+          return res.status(403).json({
+            code: 'CAMPAIGN_CUSTOMER_MISMATCH',
+            message: 'هذه القسيمة مخصصة لعميل محدد. أدخل رقم هاتف صاحب القسيمة للتأكد من الهوية.'
+          });
+        }
+      }
+      const rawOrderTotal = req.body?.orderTotal;
+      if (rawOrderTotal !== null && rawOrderTotal !== undefined && rawOrderTotal !== '' &&
+          (!Number.isFinite(Number(rawOrderTotal)) || Number(rawOrderTotal) < 0)) {
+        return res.status(400).json({ code: 'INVALID_ORDER_TOTAL', message: 'اكتب إجمالي طلب صحيحًا.' });
+      }
       const result = await redeemCouponCampaign(code, {
         redeemedBy: 'admin',
-        orderTotal: req.body?.orderTotal
+        orderTotal: rawOrderTotal
       });
       if (result.status === 'not_found') {
         return res.status(404).json({ code: 'COUPON_NOT_FOUND', message: 'لم يتم العثور على قسيمة بهذا الكود.' });
