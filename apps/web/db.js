@@ -1,4 +1,5 @@
 import pg from 'pg';
+import { createHash } from 'node:crypto';
 import { logServiceFailure } from './utils/service-error.js';
 import { readJsonWithStatus as readLegacyJsonWithStatus, writeJson as writeLegacyJson, storageReady } from './storage.js';
 
@@ -99,6 +100,23 @@ async function ensureSchema() {
 
       CREATE INDEX IF NOT EXISTS customers_sms_opt_in_idx ON customers (last_seen_at DESC) WHERE sms_marketing_consent = TRUE;
       CREATE INDEX IF NOT EXISTS customers_whatsapp_opt_in_idx ON customers (last_seen_at DESC) WHERE whatsapp_marketing_consent = TRUE;
+
+      CREATE TABLE IF NOT EXISTS customer_account_sessions (
+        token_hash TEXT PRIMARY KEY,
+        customer_id BIGINT NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+        last_seen_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+        expires_at TIMESTAMPTZ NOT NULL,
+        revoked_at TIMESTAMPTZ
+      );
+      CREATE INDEX IF NOT EXISTS customer_account_sessions_expiry_idx ON customer_account_sessions (expires_at);
+
+      CREATE TABLE IF NOT EXISTS customer_favorites (
+        customer_id BIGINT NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+        product_id TEXT NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+        PRIMARY KEY (customer_id, product_id)
+      );
     `).catch((error) => {
       // Allow retrying schema setup on a later call instead of caching a failure forever.
       schemaPromise = null;
@@ -383,5 +401,109 @@ export async function revokeCustomerMarketingConsent(customerId, channel) {
     throw error;
   } finally {
     client.release();
+  }
+}
+
+
+
+function hashCustomerSessionToken(token) {
+  return createHash('sha256').update(String(token || '')).digest('hex');
+}
+
+function accountNotConfiguredError() {
+  const error = new Error('Customer accounts are not configured.');
+  error.status = 503;
+  return error;
+}
+
+const CUSTOMER_ACCOUNT_COLUMNS = 'id, name, phone, sms_marketing_consent, whatsapp_marketing_consent, first_seen_at, last_seen_at';
+
+export async function createCustomerAccountSession(phone, rawToken) {
+  if (!dbReady) throw accountNotConfiguredError();
+  if (!phone || !rawToken) throw new Error('Phone and session token are required.');
+  await ensureSchema();
+  const client = await getPool().connect();
+  try {
+    await client.query('BEGIN');
+    const result = await client.query(
+      "INSERT INTO customers (name, phone, first_seen_at, last_seen_at, updated_at) " +
+      "VALUES ($1, $2, now(), now(), now()) " +
+      "ON CONFLICT (phone) DO UPDATE SET last_seen_at = now(), updated_at = now() " +
+      "RETURNING " + CUSTOMER_ACCOUNT_COLUMNS,
+      ['عميل ZORONA', phone]
+    );
+    const customer = result.rows[0];
+    await client.query(
+      "INSERT INTO customer_account_sessions (token_hash, customer_id, expires_at) " +
+      "VALUES ($1, $2, now() + interval '14 days')",
+      [hashCustomerSessionToken(rawToken), customer.id]
+    );
+    await client.query('COMMIT');
+    return customer;
+  } catch (error) {
+    try { await client.query('ROLLBACK'); } catch {}
+    logServiceFailure(error, { service: 'customer-account', operation: 'create-session' });
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
+export async function getCustomerAccountFromSession(rawToken) {
+  if (!dbReady || !rawToken) return null;
+  await ensureSchema();
+  const result = await getPool().query(
+    "UPDATE customer_account_sessions AS s SET last_seen_at = now() " +
+    "FROM customers AS c " +
+    "WHERE s.customer_id = c.id AND s.token_hash = $1 " +
+    "AND s.revoked_at IS NULL AND s.expires_at > now() " +
+    "RETURNING " + CUSTOMER_ACCOUNT_COLUMNS.split(', ').map(column => 'c.' + column).join(', '),
+    [hashCustomerSessionToken(rawToken)]
+  );
+  return result.rows[0] || null;
+}
+
+export async function revokeCustomerAccountSession(rawToken) {
+  if (!dbReady || !rawToken) return;
+  await ensureSchema();
+  await getPool().query(
+    'UPDATE customer_account_sessions SET revoked_at = now() WHERE token_hash = $1 AND revoked_at IS NULL',
+    [hashCustomerSessionToken(rawToken)]
+  );
+}
+
+export async function updateCustomerAccountName(customerId, name) {
+  if (!dbReady) throw accountNotConfiguredError();
+  await ensureSchema();
+  const result = await getPool().query(
+    'UPDATE customers SET name = $2, updated_at = now() WHERE id = $1 RETURNING ' + CUSTOMER_ACCOUNT_COLUMNS,
+    [customerId, name]
+  );
+  return result.rows[0] || null;
+}
+
+export async function listCustomerFavoriteIds(customerId) {
+  if (!dbReady) throw accountNotConfiguredError();
+  await ensureSchema();
+  const result = await getPool().query(
+    'SELECT product_id FROM customer_favorites WHERE customer_id = $1 ORDER BY created_at DESC',
+    [customerId]
+  );
+  return result.rows.map(row => row.product_id);
+}
+
+export async function setCustomerFavorite(customerId, productId, enabled) {
+  if (!dbReady) throw accountNotConfiguredError();
+  await ensureSchema();
+  if (enabled) {
+    await getPool().query(
+      'INSERT INTO customer_favorites (customer_id, product_id) VALUES ($1, $2) ON CONFLICT (customer_id, product_id) DO NOTHING',
+      [customerId, productId]
+    );
+  } else {
+    await getPool().query(
+      'DELETE FROM customer_favorites WHERE customer_id = $1 AND product_id = $2',
+      [customerId, productId]
+    );
   }
 }
