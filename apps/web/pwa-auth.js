@@ -57,7 +57,7 @@
       const coupon = payload.coupon || {};
       couponTitle.textContent = coupon.redeemedAt
         ? 'تم استخدام قسيمتك بالفعل'
-        : 'قسيمة خصم ' + Number(coupon.discountPercent || 10) + '%';
+        : 'قسيمة خصم ' + Number(coupon.discountPercent || 20) + '%';
       couponMessage.textContent = coupon.redeemedAt
         ? 'هذه القسيمة صُرفت من قبل، ولا يمكن استخدامها مرة أخرى.'
         : 'اعرض رمز QR للموظف عند الدفع. القسيمة صالحة للاستخدام مرة واحدة.';
