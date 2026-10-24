@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#17130f">
+<meta name="description" content="حسابك في ZORONA — حجوزاتك وأصنافك المفضلة في مكان واحد.">
+<title>حسابي — ZORONA</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&family=Playfair+Display:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/home-app.css">
+<link rel="stylesheet" href="/app-pages.css">
+<link rel="stylesheet" href="/customer-account.css">
+</head>
+<body class="home-app account-page">
+<header class="app-header is-page" aria-label="ZORONA">
+  <a class="brand" href="/" aria-label="ZORONA">ZORONA<span>RESTAURANT & CAFE</span></a>
+  <nav class="header-nav" id="app-header-nav" aria-label="التنقل الرئيسي">
+    <a href="/">الرئيسية</a><a href="/menu">المنيو</a><a href="/offers">عروض اليوم</a><a href="/reservation">حجز طاولة</a><a href="/account" aria-current="page">حسابي</a>
+  </nav>
+  <div class="app-header-actions">
+    <button class="lang" id="lang-toggle" type="button" aria-label="تغيير اللغة">EN</button>
+    <button class="app-menu-button" id="app-menu-button" type="button" aria-expanded="false" aria-controls="app-header-nav" aria-label="فتح القائمة">☰</button>
+  </div>
+</header>
+<main class="account-shell">
+  <section class="account-hero">
+    <p class="account-eyebrow">YOUR ZORONA</p>
+    <h1 data-i18n="heroTitle">حسابك، زيارتك القادمة</h1>
+    <p data-i18n="heroLead">تابع حجوزاتك واحتفظ بالأصناف اللي بتحبها في مكان واحد.</p>
+    <div class="account-hero-mark" aria-hidden="true"><span>Z</span></div>
+  </section>
+
+  <section id="account-login" class="account-login-card" aria-labelledby="login-title">
+    <div class="account-card-heading">
+      <span class="account-icon">⌁</span>
+      <div><p class="account-kicker" data-i18n="secureAccess">دخول آمن</p><h2 id="login-title" data-i18n="loginTitle">ادخل حسابك برقم الهاتف</h2></div>
+    </div>
+    <p class="account-muted" data-i18n="loginLead">هنرسل لك كود تحقق لمرة واحدة للتأكد إن رقم الهاتف يخصك.</p>
+    <form id="account-phone-form" class="account-form">
+      <label for="account-phone" data-i18n="phoneLabel">رقم الهاتف مع مفتاح الدولة</label>
+      <input id="account-phone" name="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="+971 5X XXX XXXX" required maxlength="24">
+      <button class="account-primary" id="send-code" type="submit" data-i18n="sendCode">إرسال كود التحقق</button>
+    </form>
+    <form id="account-code-form" class="account-form" hidden>
+      <p class="account-code-target" id="account-code-target"></p>
+      <label for="account-code" data-i18n="codeLabel">كود التحقق</label>
+      <input id="account-code" name="code" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{4,10}" maxlength="10" placeholder="••••••" required>
+      <button class="account-primary" id="verify-code" type="submit" data-i18n="verifyCode">تأكيد الدخول</button>
+      <button class="account-link-button" id="change-phone" type="button" data-i18n="changePhone">تغيير رقم الهاتف</button>
+    </form>
+    <p id="account-login-message" class="account-message" role="status" aria-live="polite"></p>
+    <p class="account-privacy-note"><span aria-hidden="true">♢</span> <span data-i18n="privacyNote">حجوزاتك خاصة بحسابك، ولن تظهر إلا بعد التحقق من رقم هاتفك.</span></p>
+  </section>
+
+  <section id="account-dashboard" class="account-dashboard" hidden>
+    <div class="account-welcome">
+      <div><p class="account-kicker" data-i18n="welcomeBack">أهلًا بعودتك</p><h2><span data-i18n="hello">أهلًا</span> <strong id="customer-name-heading">—</strong></h2><p id="customer-phone-heading" class="account-muted" dir="ltr"></p></div>
+      <button id="account-logout" class="account-logout" type="button" data-i18n="logout">تسجيل الخروج</button>
+    </div>
+    <div class="account-stat-grid">
+      <article class="account-stat"><span class="account-stat-icon">◷</span><strong id="upcoming-count">0</strong><span data-i18n="upcomingBookings">حجوزات قادمة</span></article>
+      <article class="account-stat"><span class="account-stat-icon">♡</span><strong id="favorite-count">0</strong><span data-i18n="favoriteItems">أصناف مفضلة</span></article>
+      <article class="account-stat"><span class="account-stat-icon">✦</span><strong id="total-booking-count">0</strong><span data-i18n="totalBookings">إجمالي الحجوزات</span></article>
+    </div>
+
+    <section class="account-section">
+      <div class="account-section-heading"><div><p class="account-kicker" data-i18n="yourVisits">زياراتك</p><h2 data-i18n="reservationsTitle">حجوزات الطاولات</h2></div><a href="/reservation" class="account-text-link" data-i18n="newBooking">حجز جديد ←</a></div>
+      <div id="account-reservations" class="account-reservation-list"></div>
+    </section>
+
+    <section class="account-section">
+      <div class="account-section-heading"><div><p class="account-kicker" data-i18n="saveForLater">احتفظ بها</p><h2 data-i18n="favoritesTitle">أصنافك المفضلة</h2></div><a href="/menu" class="account-text-link" data-i18n="viewMenu">تصفح المنيو ←</a></div>
+      <div id="account-favorites" class="account-product-grid"></div>
+      <p id="favorites-empty" class="account-empty" data-i18n="favoritesEmpty">لسه ما أضفتش أصناف للمفضلة. اختار من القائمة بالأسفل.</p>
+    </section>
+
+    <section class="account-section">
+      <div class="account-section-heading"><div><p class="account-kicker" data-i18n="discoverMore">اكتشف المزيد</p><h2 data-i18n="suggestionsTitle">أصناف من المنيو</h2></div></div>
+      <div id="account-catalog" class="account-product-grid"></div>
+      <p id="catalog-empty" class="account-empty" hidden data-i18n="catalogEmpty">لا توجد أصناف متاحة للعرض حاليًا.</p>
+    </section>
+
+    <section class="account-section account-profile-section">
+      <div class="account-section-heading"><div><p class="account-kicker" data-i18n="yourDetails">تفاصيلك</p><h2 data-i18n="profileTitle">بيانات الحساب</h2></div></div>
+      <form id="account-profile-form" class="account-profile-form">
+        <label for="account-profile-name" data-i18n="nameLabel">الاسم</label>
+        <input id="account-profile-name" name="name" maxlength="80" autocomplete="name" required>
+        <label class="account-consent-toggle"><input id="account-sms-consent" type="checkbox" disabled><span data-i18n="smsPreference">موافقة رسائل SMS التسويقية</span></label>
+        <label class="account-consent-toggle"><input id="account-whatsapp-consent" type="checkbox" disabled><span data-i18n="whatsappPreference">موافقة WhatsApp التسويقية</span></label>
+        <p class="account-consent-help" data-i18n="consentHelp">إدارة الموافقات من هنا ستتوفر في خطوة لاحقة. يمكنك طلب إيقاف الرسائل من فريق ZORONA في أي وقت.</p>
+        <button class="account-primary account-save-profile" type="submit" data-i18n="saveProfile">حفظ الاسم</button>
+        <p id="account-profile-message" class="account-message" role="status" aria-live="polite"></p>
+      </form>
+    </section>
+  </section>
+</main>
+<footer id="contact"><strong>ZORONA</strong><span>Restaurant & Cafe</span><small>© 2026 ZORONA. All rights reserved.</small></footer>
+<script type="module" src="/app-header.js"></script>
+<script type="module" src="/customer-account.js"></script>
+</body>
+</html>
