@@ -28,60 +28,66 @@ function makeService(options = {}) {
   return { service, calls, readStored: () => stored };
 }
 
-test('hero banner restores a durable configuration and provides signed media URLs', async () => {
+test('banner restores one media item and does not expose a text-editing schema', async () => {
   const { service } = makeService({
-    stored: { version: 1, banner: { enabled: true, mediaType: 'image', mediaKey: 'hero-banner/current.webp', titleAr: 'عنوان الاختبار' } }
+    stored: { version: 1, banner: { mediaType: 'image', mediaKey: 'hero-banner/current.webp', titleAr: 'ignored old text' } }
   });
   await service.restore();
   const publicBanner = service.getPublicBanner();
-  assert.equal(publicBanner.titleAr, 'عنوان الاختبار');
+  assert.equal(publicBanner.hasMedia, true);
   assert.equal(publicBanner.mediaUrl, 'signed:GET:hero-banner/current.webp:3600');
-  assert.equal('mediaKey' in publicBanner, false);
+  assert.equal('titleAr' in publicBanner, false);
+  assert.equal('posterUrl' in publicBanner, false);
   assert.equal(service.getAdminBanner().mediaKey, 'hero-banner/current.webp');
 });
 
-test('hero media upload URL validates MIME type, size, and selected media type', async () => {
+test('upload URL validates selected image/video MIME type and size', async () => {
   const { service } = makeService();
   await service.restore();
   const prepared = service.uploadPresign({
-    purpose: 'media', mediaType: 'video', fileName: 'banner.mp4',
-    contentType: 'video/mp4', size: 1024
+    mediaType: 'video', fileName: 'banner.mp4', contentType: 'video/mp4', size: 1024
   });
   assert.match(prepared.key, /^hero-banner\//);
   assert.match(prepared.uploadUrl, /^signed:PUT:/);
   assert.throws(() => service.uploadPresign({
-    purpose: 'media', mediaType: 'video', fileName: 'banner.jpg',
-    contentType: 'image/jpeg', size: 1024
-  }), /صيغة/);
+    mediaType: 'video', fileName: 'banner.jpg', contentType: 'image/jpeg', size: 1024
+  }), /نوع الملف/);
   assert.throws(() => service.uploadPresign({
-    purpose: 'poster', mediaType: 'image', fileName: 'poster.jpg',
-    contentType: 'image/jpeg', size: 16 * 1024 * 1024
+    mediaType: 'image', fileName: 'poster.jpg', contentType: 'image/jpeg', size: 16 * 1024 * 1024
   }), /15MB/);
+  assert.throws(() => service.uploadPresign({
+    mediaType: 'video', fileName: 'banner.mp4', contentType: 'video/mp4', size: 121 * 1024 * 1024
+  }), /120MB/);
 });
 
-test('saving a new banner persists settings and removes replaced media', async () => {
+test('saving one replacement persists media and removes the previous file', async () => {
   const { service, calls, readStored } = makeService({
-    stored: { version: 1, banner: { enabled: true, mediaType: 'image', mediaKey: 'hero-banner/old.webp', posterKey: 'hero-banner/old-poster.jpg' } }
+    stored: { version: 1, banner: { mediaType: 'image', mediaKey: 'hero-banner/old.webp', posterKey: 'hero-banner/old-poster.jpg' } }
   });
   await service.restore();
-  const saved = await service.update({
-    enabled: true,
-    mediaType: 'video',
-    mediaKey: 'hero-banner/new.mp4',
-    posterKey: '',
-    titleAr: 'عنوان جديد',
-    primaryUrl: '/menu'
-  });
+  const saved = await service.update({ mediaType: 'video', mediaKey: 'hero-banner/new.mp4', titleAr: 'ignored new text' });
   assert.equal(saved.mediaKey, 'hero-banner/new.mp4');
-  assert.equal(saved.titleAr, 'عنوان جديد');
+  assert.equal(saved.mediaType, 'video');
+  assert.equal('titleAr' in saved, false);
   assert.equal(readStored().banner.mediaType, 'video');
   assert.deepEqual(calls.deleted, ['hero-banner/old.webp', 'hero-banner/old-poster.jpg']);
+  assert.deepEqual(Object.keys(readStored().banner).sort(), ['mediaKey', 'mediaType', 'updatedAt']);
+});
+
+test('removing media persists empty media key and deletes previous file', async () => {
+  const { service, calls } = makeService({
+    stored: { version: 2, banner: { mediaType: 'video', mediaKey: 'hero-banner/current.mp4' } }
+  });
+  await service.restore();
+  const saved = await service.update({ mediaKey: '' });
+  assert.equal(saved.hasMedia, false);
+  assert.deepEqual(calls.deleted, ['hero-banner/current.mp4']);
 });
 
 test('failed persistence does not replace the active banner configuration', async () => {
   const { service } = makeService({ writeResult: false });
   await service.restore();
   const before = service.getAdminBanner();
-  await assert.rejects(service.update({ titleAr: 'لا تحفظ' }), /تعذر حفظ/);
-  assert.equal(service.getAdminBanner().titleAr, before.titleAr);
+  await assert.rejects(service.update({ mediaKey: 'hero-banner/new.webp' }), /تعذر حفظ/);
+  assert.equal(service.getAdminBanner().mediaKey, before.mediaKey);
 });

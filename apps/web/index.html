@@ -174,8 +174,6 @@ html.pwa-installed:not(.pwa-authenticated) body>:not(#pwa-auth-overlay):not(#pwa
 
 <main>
   <section id="home" class="app-hero" aria-labelledby="hero-title">
-    <img id="hero-banner-image" class="app-hero-visual" alt="" aria-hidden="true" hidden>
-    <video id="hero-banner-video" class="app-hero-visual" muted autoplay loop playsinline preload="metadata" aria-hidden="true" hidden></video>
     <div class="app-hero-media" aria-hidden="true"></div>
     <div class="app-hero-copy">
       <p class="app-hero-kicker">ZORONA · RESTAURANT & CAFE</p>
@@ -185,6 +183,10 @@ html.pwa-installed:not(.pwa-authenticated) body>:not(#pwa-auth-overlay):not(#pwa
         <a class="app-primary-cta" href="/menu">استكشف المنيو <span aria-hidden="true">←</span></a>
         <a class="app-secondary-cta" href="/reservation">احجز طاولتك</a>
       </div>
+    </div>
+    <div id="hero-banner-media-wrap" class="app-hero-media-frame" hidden>
+      <img id="hero-banner-image" class="app-hero-visual" alt="" aria-hidden="true" hidden>
+      <video id="hero-banner-video" class="app-hero-visual" muted autoplay loop playsinline preload="metadata" aria-hidden="true" hidden></video>
     </div>
   </section>
 

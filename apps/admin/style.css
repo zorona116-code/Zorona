@@ -138,3 +138,22 @@ form{display:grid;gap:14px}label{font-size:12px;color:#5e584e;display:grid;gap:6
 .hero-banner-fields input,.hero-banner-fields textarea{min-width:0}
 .hero-banner-save-row .submit{width:auto;min-width:210px}
 @media(max-width:720px){.hero-banner-media-fields,.hero-banner-fields{grid-template-columns:1fr}.hero-banner-media-fields>label:last-child{grid-column:auto}.hero-banner-fields h3{grid-column:1}.hero-banner-preview{min-height:290px}.hero-banner-preview-copy{padding:26px 20px}.hero-banner-fields{padding:15px}.hero-banner-save-row{align-items:stretch}.hero-banner-save-row .submit{width:100%}}
+
+
+/* Simplified media-only hero banner manager */
+.hero-banner-form{display:grid;gap:16px;margin-top:18px}
+.hero-banner-preview{position:relative;isolation:isolate;display:grid;place-items:center;width:100%;min-height:0;max-height:440px;aspect-ratio:16/9;overflow:hidden;border:1px solid rgba(184,148,85,.3);border-radius:18px;background:#15110d;color:#d8c9b0}
+.hero-banner-preview-media{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;object-position:center;background:#15110d}
+.hero-banner-preview-media[hidden]{display:none!important}
+.hero-banner-preview>p{margin:0;padding:20px;color:var(--muted);font-size:12px;text-align:center}
+.hero-banner-media-fields{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2fr);gap:14px}
+.hero-banner-media-fields>label{display:grid;align-content:start;gap:8px;font-size:12px}
+.hero-banner-media-fields>label small{color:var(--muted);font-size:11px;line-height:1.8}
+.hero-banner-file-note{color:var(--gold-dark);font-size:11px;line-height:1.7;overflow-wrap:anywhere}
+.hero-banner-save-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.hero-banner-save-row .submit{width:auto;min-width:210px}
+.hero-banner-save-row .small-action{min-height:42px}
+#hero-banner-save-status{margin:0;min-height:20px;font-size:11px;color:var(--gold-dark)}
+@media(max-width:720px){.hero-banner-media-fields{grid-template-columns:1fr}.hero-banner-save-row{align-items:stretch}.hero-banner-save-row .submit,.hero-banner-save-row .small-action{width:100%}.hero-banner-preview{aspect-ratio:16/9}}
+
+#hero-banner-remove-media[hidden]{display:none!important}
