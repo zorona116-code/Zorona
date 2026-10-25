@@ -17,14 +17,6 @@ export function registerHeroBannerRoutes(app, { service, requireAdminApiKey }) {
     }
   });
 
-  app.post('/api/admin/hero-banner/delete-presign', requireAdminApiKey, (req, res, next) => {
-    try {
-      return res.json(service.deletePresign(req.body || {}));
-    } catch (error) {
-      next(error);
-    }
-  });
-
   app.patch('/api/admin/hero-banner', requireAdminApiKey, async (req, res, next) => {
     try {
       return res.json(await service.update(req.body || {}));
