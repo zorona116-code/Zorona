@@ -2,7 +2,7 @@ import crypto from 'node:crypto';
 import { logServiceFailure } from './utils/service-error.js';
 
 const env = (name) => process.env[name] || '';
-const endpoint = String(env('AWS_ENDPOINT_URL') || 'https://t3.storageapi.dev').replace(/\/$/, '');
+const endpoint = String(env('AWS_ENDPOINT_URL') || 'https://t3.storage.dev').replace(/\/$/, '');
 const region = String(env('AWS_DEFAULT_REGION') || 'auto');
 const bucket = String(env('AWS_S3_BUCKET_NAME') || '').trim();
 const accessKey = String(env('AWS_' + 'ACCESS_KEY_ID') || '').trim();
