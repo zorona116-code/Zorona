@@ -108,30 +108,29 @@ async function load() {
 }
 
 async function uploadFile(file, mediaType) {
-  const prepared = await request('/api/admin/hero-banner/upload-presign', {
-    method: 'POST',
-    body: JSON.stringify({
-      mediaType,
-      fileName: file.name,
-      contentType: file.type,
-      size: file.size
-    })
-  });
-  await new Promise((resolve, reject) => {
+  return await new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
-    xhr.open('PUT', prepared.uploadUrl);
+    xhr.open('POST', '/proxy/api/admin/hero-banner/upload');
+    xhr.timeout = 180000;
     xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
+    xhr.setRequestHeader('X-Hero-Media-Type', mediaType);
+    xhr.setRequestHeader('X-File-Name', encodeURIComponent(file.name));
+    xhr.setRequestHeader('Accept', 'application/json');
+    xhr.setRequestHeader('X-Request-Id', crypto.randomUUID());
     xhr.upload.onprogress = event => {
       if (event.lengthComputable) setProgress(Math.round(event.loaded / event.total * 100));
     };
-    xhr.onload = () => xhr.status >= 200 && xhr.status < 300
-      ? resolve()
-      : reject(new Error('فشل رفع الملف إلى تخزين الوسائط.'));
-    xhr.onerror = () => reject(new Error('تعذر الاتصال بتخزين الوسائط.'));
+    xhr.onload = () => {
+      let data = {};
+      try { data = JSON.parse(xhr.responseText || '{}'); } catch {}
+      if (xhr.status >= 200 && xhr.status < 300) return resolve(data);
+      reject(new Error(data.message || 'فشل رفع الملف وحفظه. حاول مرة أخرى.'));
+    };
+    xhr.onerror = () => reject(new Error('تعذر الاتصال بالخادم أثناء الرفع.'));
+    xhr.ontimeout = () => reject(new Error('استغرق الرفع وقتًا طويلًا. جرّب ملفًا أصغر.'));
     xhr.onabort = () => reject(new Error('تم إلغاء رفع الملف.'));
     xhr.send(file);
   });
-  return prepared.key;
 }
 
 $('#hero-banner-media-type').addEventListener('change', () => {
@@ -199,11 +198,7 @@ $('#hero-banner-form').addEventListener('submit', async event => {
   button.disabled = true;
   setStatus('جارٍ رفع الملف وحفظه…');
   try {
-    const key = await uploadFile(file, mediaType);
-    const saved = await request('/api/admin/hero-banner', {
-      method: 'PATCH',
-      body: JSON.stringify({ mediaType, mediaKey: key })
-    });
+    const saved = await uploadFile(file, mediaType);
     fillForm(saved);
     setStatus('تم حفظ الوسائط. سيظهر الملف أسفل النص الحالي في البانر.');
   } catch (error) {
