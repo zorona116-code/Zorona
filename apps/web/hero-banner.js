@@ -2,12 +2,10 @@
   'use strict';
 
   const $ = selector => document.querySelector(selector);
-  let currentBanner = null;
   let refreshTimer = 0;
 
-  const language = () => localStorage.getItem('ARABISK_LANG') === 'en' ? 'en' : 'ar';
-
   function clearMedia() {
+    const wrap = $('#hero-banner-media-wrap');
     const image = $('#hero-banner-image');
     const video = $('#hero-banner-video');
     if (image) {
@@ -19,124 +17,61 @@
       video.hidden = true;
       video.removeAttribute('src');
       video.removeAttribute('poster');
+      video.removeAttribute('controls');
       video.load();
     }
-  }
-
-  function setHeroTitle(main, accent) {
-    const title = $('#hero-title');
-    if (!title) return;
-    const mainLine = document.createElement('span');
-    mainLine.textContent = main || '';
-    const accentLine = document.createElement('em');
-    accentLine.textContent = accent || '';
-    title.replaceChildren(mainLine, document.createElement('br'), accentLine);
+    if (wrap) wrap.hidden = true;
   }
 
   function applyMedia(banner) {
+    const wrap = $('#hero-banner-media-wrap');
     const image = $('#hero-banner-image');
     const video = $('#hero-banner-video');
-    if (!image || !video) return;
-    if (!banner.enabled) {
+    if (!wrap || !image || !video) return;
+
+    if (!banner?.hasMedia || !banner.mediaUrl) {
       clearMedia();
       return;
     }
-    if (banner.mediaType === 'video' && banner.mediaUrl) {
-      image.hidden = !banner.posterUrl;
-      image.src = banner.posterUrl || '';
-      video.hidden = false;
-      video.poster = banner.posterUrl || '';
-      if (video.src !== banner.mediaUrl) {
-        video.src = banner.mediaUrl;
-        video.load();
-      }
+
+    wrap.hidden = false;
+    image.hidden = true;
+    video.pause();
+    video.hidden = true;
+    video.removeAttribute('src');
+    video.removeAttribute('controls');
+    video.load();
+
+    if (banner.mediaType === 'video') {
+      video.src = banner.mediaUrl;
       video.muted = true;
+      video.defaultMuted = true;
+      video.volume = 0;
       video.loop = true;
       video.autoplay = true;
       video.playsInline = true;
+      video.removeAttribute('controls');
+      video.hidden = false;
+      video.load();
       const playback = video.play();
       if (playback && typeof playback.catch === 'function') playback.catch(() => {});
       return;
     }
-    video.pause();
-    video.hidden = true;
-    video.removeAttribute('src');
-    video.removeAttribute('poster');
-    video.load();
-    if (banner.mediaType === 'image' && banner.mediaUrl) {
-      image.src = banner.mediaUrl;
-      image.hidden = false;
-    } else if (banner.mediaType === 'video' && banner.posterUrl) {
-      image.src = banner.posterUrl;
-      image.hidden = false;
-    } else {
-      image.hidden = true;
-      image.removeAttribute('src');
-    }
-  }
 
-  function applyDefaultCopy() {
-    const en = language() === 'en';
-    const kicker = $('.app-hero-kicker');
-    const lead = $('.app-hero-lead');
-    const primary = $('.app-primary-cta');
-    const secondary = $('.app-secondary-cta');
-    if (kicker) kicker.textContent = en ? 'ZORONA · LEBANESE & TURKISH CUISINE' : 'ZORONA · مطعم لبناني وتركي';
-    setHeroTitle(en ? 'Lebanese & Turkish flavors' : 'نكهات لبنان وتركيا', en ? 'at one table' : 'على مائدة واحدة');
-    if (lead) lead.textContent = en
-      ? 'From Turkish grills and Lebanese mezze to authentic dishes made for sharing with family and friends.'
-      : 'من المشاوي التركية والمقبلات اللبنانية إلى أطباق أصيلة تجمع العائلة والأصدقاء.';
-    if (primary) {
-      primary.textContent = (en ? 'Explore the Menu' : 'استكشف المنيو') + ' ←';
-      primary.href = '/menu';
-    }
-    if (secondary) {
-      secondary.textContent = (en ? 'Book a Table' : 'احجز طاولتك') + ' ←';
-      secondary.href = '/reservation';
-    }
-  }
-
-  function applyBanner() {
-    if (!currentBanner) return;
-    const banner = currentBanner;
-    if (!banner.enabled) {
-      clearMedia();
-      applyDefaultCopy();
-      return;
-    }
-    const en = language() === 'en';
-    const suffix = en ? 'En' : 'Ar';
-    const kicker = $('#hero-banner-kicker') || $('.app-hero-kicker');
-    const lead = $('#hero-banner-lead') || $('.app-hero-lead');
-    const primary = $('.app-primary-cta');
-    const secondary = $('.app-secondary-cta');
-
-    if (kicker) kicker.textContent = banner['kicker' + suffix] || '';
-    setHeroTitle(banner['title' + suffix], banner['accent' + suffix]);
-    if (lead) lead.textContent = banner['lead' + suffix] || '';
-    if (primary) {
-      primary.textContent = (banner['primaryLabel' + suffix] || '') + ' ←';
-      primary.href = banner.primaryUrl || '/menu';
-    }
-    if (secondary) {
-      secondary.textContent = (banner['secondaryLabel' + suffix] || '') + ' ←';
-      secondary.href = banner.secondaryUrl || '/reservation';
-    }
-    applyMedia(banner);
+    image.src = banner.mediaUrl;
+    image.hidden = false;
   }
 
   async function loadBanner() {
     try {
       const response = await fetch('/api/hero-banner', { cache: 'no-store' });
-      if (!response.ok) throw new Error('Hero banner unavailable');
-      currentBanner = await response.json();
-      applyBanner();
+      if (!response.ok) throw new Error('Hero media unavailable');
+      applyMedia(await response.json());
     } catch {
-      // Keep the built-in bilingual hero content if banner settings cannot be loaded.
+      // The existing hero text remains visible even when media cannot be loaded.
     }
   }
 
-  window.addEventListener('arabisk:language-updated', applyBanner);
   void loadBanner();
   refreshTimer = window.setInterval(() => void loadBanner(), 50 * 60 * 1000);
   window.addEventListener('pagehide', () => {
