@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { createHeroBannerService } from '../apps/web/services/hero-banner-service.js';
 
 function makeService(options = {}) {
-  const calls = { writes: [], deleted: [], signed: [] };
+  const calls = { writes: [], deleted: [], deletedStored: [], signed: [] };
   let stored = options.stored ?? null;
   const service = createHeroBannerService({
     readJsonWithStatus: async () => ({ ok: true, found: stored !== null, value: stored }),
@@ -23,6 +23,10 @@ function makeService(options = {}) {
     deleteObject: async key => {
       calls.deleted.push(key);
       return true;
+    },
+    deleteStoredMedia: async key => {
+      calls.deletedStored.push(key);
+      return options.storedDeleteResult !== false;
     }
   });
   return { service, calls, readStored: () => stored };
@@ -90,4 +94,18 @@ test('failed persistence does not replace the active banner configuration', asyn
   const before = service.getAdminBanner();
   await assert.rejects(service.update({ mediaKey: 'hero-banner/new.webp' }), /تعذر حفظ/);
   assert.equal(service.getAdminBanner().mediaKey, before.mediaKey);
+});
+
+
+test('database-backed banner media remains visible when external storage is not configured', async () => {
+  const { service, calls } = makeService({ storageReady: false });
+  await service.restore();
+  const key = 'hero-banner/db/123e4567-e89b-12d3-a456-426614174000';
+  const saved = await service.update({ mediaType: 'video', mediaKey: key });
+  assert.equal(saved.hasMedia, true);
+  assert.match(saved.mediaUrl, /\/api\/hero-banner\/media\/123e4567-e89b-12d3-a456-426614174000$/);
+  assert.deepEqual(calls.deletedStored, []);
+  await service.update({ mediaKey: '' });
+  assert.deepEqual(calls.deletedStored, [key]);
+  assert.deepEqual(calls.deleted, []);
 });

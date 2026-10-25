@@ -232,6 +232,86 @@ async function ensureSchema() {
 }
 
 
+let heroBannerMediaSchemaPromise = null;
+
+async function ensureHeroBannerMediaSchema() {
+  if (!dbReady) {
+    const error = new Error('رفع الوسائط غير متاح لأن قاعدة البيانات غير مهيأة.');
+    error.status = 503;
+    throw error;
+  }
+  if (!heroBannerMediaSchemaPromise) {
+    heroBannerMediaSchemaPromise = getPool().query(`
+      CREATE TABLE IF NOT EXISTS hero_banner_media (
+        media_key TEXT PRIMARY KEY,
+        media_type TEXT NOT NULL CHECK (media_type IN ('image', 'video')),
+        content_type TEXT NOT NULL,
+        file_name TEXT NOT NULL DEFAULT '',
+        file_data BYTEA NOT NULL,
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+        CHECK (media_key LIKE 'hero-banner/db/%')
+      )
+    `).catch((error) => {
+      heroBannerMediaSchemaPromise = null;
+      throw error;
+    });
+  }
+  await heroBannerMediaSchemaPromise;
+}
+
+export async function saveHeroBannerMedia({ mediaKey, mediaType, contentType, fileName = '', data }) {
+  if (!dbReady) {
+    const error = new Error('رفع الوسائط غير متاح لأن قاعدة البيانات غير مهيأة.');
+    error.status = 503;
+    throw error;
+  }
+  if (!String(mediaKey || '').startsWith('hero-banner/db/') ||
+      !['image', 'video'].includes(mediaType) ||
+      !Buffer.isBuffer(data) || data.length < 1) {
+    const error = new Error('بيانات ملف البانر غير صالحة.');
+    error.status = 400;
+    throw error;
+  }
+  await ensureHeroBannerMediaSchema();
+  await getPool().query(
+    `INSERT INTO hero_banner_media (media_key, media_type, content_type, file_name, file_data)
+     VALUES ($1, $2, $3, $4, $5)
+     ON CONFLICT (media_key) DO UPDATE SET
+       media_type = EXCLUDED.media_type,
+       content_type = EXCLUDED.content_type,
+       file_name = EXCLUDED.file_name,
+       file_data = EXCLUDED.file_data,
+       updated_at = now()`,
+    [mediaKey, mediaType, contentType, String(fileName || '').slice(0, 180), data]
+  );
+  return { mediaKey };
+}
+
+export async function getHeroBannerMedia(mediaKey) {
+  if (!dbReady) {
+    const error = new Error('تخزين وسائط البانر غير متاح.');
+    error.status = 503;
+    throw error;
+  }
+  await ensureHeroBannerMediaSchema();
+  const result = await getPool().query(
+    'SELECT media_key AS "mediaKey", media_type AS "mediaType", content_type AS "contentType", file_name AS "fileName", file_data AS data, updated_at AS "updatedAt" FROM hero_banner_media WHERE media_key = $1',
+    [String(mediaKey || '')]
+  );
+  return result.rows[0] || null;
+}
+
+export async function deleteHeroBannerMedia(mediaKey) {
+  if (!dbReady) return true;
+  await ensureHeroBannerMediaSchema();
+  const result = await getPool().query(
+    'DELETE FROM hero_banner_media WHERE media_key = $1',
+    [String(mediaKey || '')]
+  );
+  return result.rowCount > 0;
+}
+
+
 export async function migrateLegacySnapshots() {
   if (!dbReady) return { ok: false, skipped: true, reason: 'database_not_configured' };
   if (!storageReady) return { ok: false, skipped: true, reason: 'legacy_storage_not_configured' };

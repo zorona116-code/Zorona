@@ -2,7 +2,7 @@ import express from 'express';
 import path from 'node:path';
 import { fileURLToPath } from 'url';
 import { presign, storageReady, deleteObject } from './storage.js';
-import { dbReady, readJsonWithStatus, writeJson, dbHealthCheck, closeDbPool, migrateLegacySnapshots, saveWebPushSubscription, deleteWebPushSubscription, listWebPushSubscriptions } from './db.js';
+import { dbReady, readJsonWithStatus, writeJson, dbHealthCheck, closeDbPool, migrateLegacySnapshots, saveWebPushSubscription, deleteWebPushSubscription, listWebPushSubscriptions, saveHeroBannerMedia, getHeroBannerMedia, deleteHeroBannerMedia } from './db.js';
 import { serviceErrorHandler, logServiceFailure } from './utils/service-error.js';
 import { cleanText, cleanKey, cleanUrl, normalizeList } from './utils/input.js';
 import { categories, products } from './menu-data.js';
@@ -126,10 +126,17 @@ const heroBannerService = createHeroBannerService({
   storageReady,
   presign,
   deleteObject,
+  deleteStoredMedia: deleteHeroBannerMedia,
   persistenceReady: dbReady || (!isProductionRuntime && storageReady),
   allowEphemeral: !isProductionRuntime
 });
-registerHeroBannerRoutes(app, { service: heroBannerService, requireAdminApiKey });
+registerHeroBannerRoutes(app, {
+  service: heroBannerService,
+  requireAdminApiKey,
+  saveMedia: saveHeroBannerMedia,
+  getMedia: getHeroBannerMedia,
+  deleteMedia: deleteHeroBannerMedia
+});
 const categoryService=createCategoryService({categoriesRepository:stateRepository.categories,productsRepository:stateRepository.products,storageReady,dbReady,presign,readJsonWithStatus,writeJson,deleteObject,isAdminApiKeyValid});
 registerCategoryRoutes(app,{service:categoryService,requireAdminApiKey});
 const restoreCategories=categoryService.restore;
