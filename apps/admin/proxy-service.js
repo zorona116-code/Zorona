@@ -27,21 +27,36 @@ export function createProxyApi({ adminApiKey, webApiBase, requestId }) {
       'X-Request-Id': String(res.getHeader('X-Request-Id') || requestId(req))
     };
     if (req.headers['content-type']) headers['Content-Type'] = req.headers['content-type'];
+    if (req.headers['x-hero-media-type']) headers['X-Hero-Media-Type'] = req.headers['x-hero-media-type'];
+    if (req.headers['x-file-name']) headers['X-File-Name'] = req.headers['x-file-name'];
 
     let body;
+    let streamingBody = false;
     if (req.method === 'POST' || req.method === 'PATCH' || req.method === 'PUT') {
-      try { body = JSON.stringify(await parseJsonBody(req)); }
-      catch (error) {
-        const status = error?.status === 413 ? 413 : 400;
-        res.writeHead(status, {'Cache-Control':'no-store','Content-Type':'application/json; charset=utf-8'});
-        return res.end(JSON.stringify({ message: status === 413 ? 'Request body is too large.' : 'Invalid JSON request.' }));
+      const contentType = String(req.headers['content-type'] || '').toLowerCase();
+      if (contentType.includes('application/json')) {
+        try { body = JSON.stringify(await parseJsonBody(req)); }
+        catch (error) {
+          const status = error?.status === 413 ? 413 : 400;
+          res.writeHead(status, {'Cache-Control':'no-store','Content-Type':'application/json; charset=utf-8'});
+          return res.end(JSON.stringify({ message: status === 413 ? 'Request body is too large.' : 'Invalid JSON request.' }));
+        }
+      } else {
+        // Stream binary uploads through the admin proxy instead of trying to parse them as JSON.
+        body = req;
+        streamingBody = true;
       }
     }
 
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), UPSTREAM_API_TIMEOUT_MS);
+    const requestTimeoutMs = upstreamPath === '/api/admin/hero-banner/upload'
+      ? 180000
+      : UPSTREAM_API_TIMEOUT_MS;
+    const timeout = setTimeout(() => controller.abort(), requestTimeoutMs);
     try {
-      const upstream = await fetch(upstreamUrl, { method: req.method, headers, body, signal: controller.signal });
+      const fetchOptions = { method: req.method, headers, body, signal: controller.signal };
+      if (streamingBody) fetchOptions.duplex = 'half';
+      const upstream = await fetch(upstreamUrl, fetchOptions);
       const contentLength = Number(upstream.headers.get('content-length'));
       if (Number.isFinite(contentLength) && contentLength > MAX_UPSTREAM_RESPONSE_BYTES) {
         return res.writeHead(502, {'Cache-Control':'no-store','Content-Type':'application/json; charset=utf-8'})
