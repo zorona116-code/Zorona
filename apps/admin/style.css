@@ -155,3 +155,5 @@ form{display:grid;gap:14px}label{font-size:12px;color:#5e584e;display:grid;gap:6
 .hero-banner-save-row .small-action{min-height:42px}
 #hero-banner-save-status{margin:0;min-height:20px;font-size:11px;color:var(--gold-dark)}
 @media(max-width:720px){.hero-banner-media-fields{grid-template-columns:1fr}.hero-banner-save-row{align-items:stretch}.hero-banner-save-row .submit,.hero-banner-save-row .small-action{width:100%}.hero-banner-preview{aspect-ratio:16/9}}
+
+#hero-banner-remove-media[hidden]{display:none!important}
