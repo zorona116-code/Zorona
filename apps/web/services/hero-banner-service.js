@@ -3,6 +3,7 @@ import { cleanText, cleanKey } from '../utils/input.js';
 import { logServiceFailure } from '../utils/service-error.js';
 
 const STATE_KEY = 'data/arabisk-hero-banner-v1.json';
+export const HERO_BANNER_DATABASE_MEDIA_PREFIX = 'hero-banner/db/';
 const MAX_IMAGE_BYTES = 15 * 1024 * 1024;
 const MAX_VIDEO_BYTES = 120 * 1024 * 1024;
 const IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/avif']);
@@ -20,6 +21,7 @@ export function createHeroBannerService({
   storageReady,
   presign,
   deleteObject,
+  deleteStoredMedia = async () => true,
   persistenceReady = storageReady,
   allowEphemeral = false
 }) {
@@ -37,7 +39,18 @@ export function createHeroBannerService({
   }
 
   function mediaUrl(key) {
-    if (!key || !storageReady) return '';
+    if (!key) return '';
+    if (key.startsWith(HERO_BANNER_DATABASE_MEDIA_PREFIX)) {
+      const id = key.slice(HERO_BANNER_DATABASE_MEDIA_PREFIX.length);
+      if (!id || !/^[a-f0-9-]{36}$/i.test(id)) return '';
+      const mediaPath = `/api/hero-banner/media/${encodeURIComponent(id)}`;
+      const publicBase = String(
+        process.env.RENDER_EXTERNAL_URL ||
+        (process.env.NODE_ENV === 'production' ? 'https://zorona-free.onrender.com' : '')
+      ).replace(/\\/$/, '');
+      return publicBase ? publicBase + mediaPath : mediaPath;
+    }
+    if (!storageReady) return '';
     try {
       return presign('GET', key, 3600);
     } catch (error) {
@@ -120,8 +133,8 @@ export function createHeroBannerService({
 
     banner = next;
     const obsolete = [...new Set([
-      previous.mediaKey && previous.mediaKey !== next.mediaKey ? previous.mediaKey : '',
-      legacyPosterKey && legacyPosterKey !== next.mediaKey ? legacyPosterKey : ''
+      previous.mediaKey && previous.mediaKey !== next.mediaKey && !previous.mediaKey.startsWith(HERO_BANNER_DATABASE_MEDIA_PREFIX) ? previous.mediaKey : '',
+      legacyPosterKey && legacyPosterKey !== next.mediaKey && !legacyPosterKey.startsWith(HERO_BANNER_DATABASE_MEDIA_PREFIX) ? legacyPosterKey : ''
     ].filter(Boolean))];
     legacyPosterKey = '';
     for (const key of obsolete) {
@@ -132,6 +145,13 @@ export function createHeroBannerService({
           operation: 'cleanupOldMedia'
         });
       }
+    }
+    if (previous.mediaKey.startsWith(HERO_BANNER_DATABASE_MEDIA_PREFIX) &&
+        previous.mediaKey !== next.mediaKey && !(await deleteStoredMedia(previous.mediaKey))) {
+      logServiceFailure(new Error('Old database hero banner media could not be removed.'), {
+        service: 'hero-banner',
+        operation: 'cleanupOldDatabaseMedia'
+      });
     }
     return present(true);
   }
