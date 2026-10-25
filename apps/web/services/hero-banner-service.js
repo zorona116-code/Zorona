@@ -47,7 +47,7 @@ export function createHeroBannerService({
       const publicBase = String(
         process.env.RENDER_EXTERNAL_URL ||
         (process.env.NODE_ENV === 'production' ? 'https://zorona-free.onrender.com' : '')
-      ).replace(/\\/$/, '');
+      ).replace(/\/+$/, '');
       return publicBase ? publicBase + mediaPath : mediaPath;
     }
     if (!storageReady) return '';
